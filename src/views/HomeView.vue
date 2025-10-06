@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import SearchBar from '@/components/SearchBar.vue'
 import ListCard from '@/components/ListCard.vue'
 import { useListsStore } from '@/stores/lists'
+
+const router = useRouter()
 
 const listsStore = useListsStore()
 const { searchQuery, recurrentLists, activeLists } = storeToRefs(listsStore)
@@ -24,7 +27,7 @@ function createNewList() {
 }
 
 function handleListClick(listId: string) {
-  console.log('List clicked:', listId)
+  router.push(`/list/${listId}`)
 }
 
 function handleToggleRecurrent(listId: string) {
