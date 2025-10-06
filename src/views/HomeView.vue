@@ -23,12 +23,40 @@ function createNewList() {
   }
 }
 
-function handleListMenu(listId: string) {
-  console.log('Menu clicked for list:', listId)
-}
-
 function handleListClick(listId: string) {
   console.log('List clicked:', listId)
+}
+
+function handleToggleRecurrent(listId: string) {
+  // TODO: Toggle recurrent status
+  console.log('Toggle recurrent for list:', listId)
+}
+
+function handleDeleteList(listId: string) {
+  if (confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
+    listsStore.deleteList(listId)
+  }
+}
+
+function handleRenameList(listId: string) {
+  const list = listsStore.lists.find((l) => l.id === listId)
+  if (list) {
+    const newName = prompt('Nuevo nombre de la lista:', list.name)
+    if (newName && newName.trim()) {
+      // TODO: Implement rename functionality in store
+      console.log('Rename list:', listId, 'to', newName)
+    }
+  }
+}
+
+function handleTogglePrivate(listId: string) {
+  // TODO: Toggle private status
+  console.log('Toggle private for list:', listId)
+}
+
+function handleShareList(listId: string) {
+  // TODO: Implement share functionality
+  console.log('Share list:', listId)
 }
 </script>
 
@@ -54,8 +82,12 @@ function handleListClick(listId: string) {
             :key="list.id"
             :list="list"
             :is-highlighted="true"
-            @menu-click="handleListMenu(list.id)"
             @click="handleListClick(list.id)"
+            @toggle-recurrent="handleToggleRecurrent(list.id)"
+            @delete="handleDeleteList(list.id)"
+            @rename="handleRenameList(list.id)"
+            @toggle-private="handleTogglePrivate(list.id)"
+            @share="handleShareList(list.id)"
           />
         </div>
       </div>
@@ -67,8 +99,12 @@ function handleListClick(listId: string) {
             v-for="list in activeLists"
             :key="list.id"
             :list="list"
-            @menu-click="handleListMenu(list.id)"
             @click="handleListClick(list.id)"
+            @toggle-recurrent="handleToggleRecurrent(list.id)"
+            @delete="handleDeleteList(list.id)"
+            @rename="handleRenameList(list.id)"
+            @toggle-private="handleTogglePrivate(list.id)"
+            @share="handleShareList(list.id)"
           />
         </div>
       </div>
