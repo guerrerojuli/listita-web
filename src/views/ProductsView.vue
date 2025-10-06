@@ -60,7 +60,7 @@ function updateProduct() {
 }
 
 function handleDeleteProduct(productId: string) {
-  if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+  if (confirm('Are you sure you want to delete this product?')) {
     productsStore.deleteProduct(productId)
   }
 }
@@ -77,7 +77,7 @@ function handleDeleteProduct(productId: string) {
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
         <v-text-field
           v-model="searchQuery"
-          placeholder="Buscar categorías o productos"
+          placeholder="Search categories or products"
           variant="outlined"
           density="comfortable"
           bg-color="white"
@@ -101,7 +101,7 @@ function handleDeleteProduct(productId: string) {
 
       <div v-else class="empty-state">
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-package-variant</v-icon>
-        <p class="text-h6 text-medium-emphasis">No se encontraron productos</p>
+        <p class="text-h6 text-medium-emphasis">No products found</p>
       </div>
 
       <!-- Dialog for adding new product -->

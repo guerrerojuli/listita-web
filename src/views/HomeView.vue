@@ -36,7 +36,7 @@ function handleToggleRecurrent(listId: string) {
 }
 
 function handleDeleteList(listId: string) {
-  if (confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
+  if (confirm('Are you sure you want to delete this list?')) {
     listsStore.deleteList(listId)
   }
 }
@@ -44,7 +44,7 @@ function handleDeleteList(listId: string) {
 function handleRenameList(listId: string) {
   const list = listsStore.lists.find((l) => l.id === listId)
   if (list) {
-    const newName = prompt('Nuevo nombre de la lista:', list.name)
+    const newName = prompt('New list name:', list.name)
     if (newName && newName.trim()) {
       // TODO: Implement rename functionality in store
       console.log('Rename list:', listId, 'to', newName)
@@ -74,11 +74,11 @@ function handleShareList(listId: string) {
       </div>
 
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
-        <SearchBar v-model="searchQuery" placeholder="Buscar categorías o productos" />
+        <SearchBar v-model="searchQuery" placeholder="Search categories or products" />
       </div>
 
       <div v-if="recurrentLists.length > 0" class="mb-10">
-        <h2 class="section-title mb-6">Recurrentes</h2>
+        <h2 class="section-title mb-6">Recurring</h2>
         <div class="list-grid">
           <ListCard
             v-for="list in recurrentLists"
@@ -96,7 +96,7 @@ function handleShareList(listId: string) {
       </div>
 
       <div v-if="activeLists.length > 0" class="mb-10">
-        <h2 class="section-title mb-6">Activas</h2>
+        <h2 class="section-title mb-6">Active</h2>
         <div class="list-grid">
           <ListCard
             v-for="list in activeLists"
@@ -114,17 +114,17 @@ function handleShareList(listId: string) {
 
       <div v-if="recurrentLists.length === 0 && activeLists.length === 0" class="text-center py-16">
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-clipboard-text-outline</v-icon>
-        <p class="text-h6 text-medium-emphasis">No se encontraron listas</p>
+        <p class="text-h6 text-medium-emphasis">No lists found</p>
       </div>
 
       <!-- Dialog for creating new list -->
       <v-dialog v-model="dialog" max-width="500">
         <v-card>
-          <v-card-title class="text-h5">Nueva Lista</v-card-title>
+          <v-card-title class="text-h5">New List</v-card-title>
           <v-card-text>
             <v-text-field
               v-model="newListName"
-              label="Nombre de la lista"
+              label="List name"
               variant="outlined"
               autofocus
               @keyup.enter="createNewList"
@@ -132,14 +132,14 @@ function handleShareList(listId: string) {
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+            <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
             <v-btn
               color="primary"
               variant="elevated"
               :disabled="!newListName.trim()"
               @click="createNewList"
             >
-              Crear
+              Create
             </v-btn>
           </v-card-actions>
         </v-card>

@@ -50,7 +50,7 @@ function handleDecrement(productId: string) {
 }
 
 function handleDeleteProduct(productId: string) {
-  if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+  if (confirm('Are you sure you want to delete this product?')) {
     productsStore.deleteProduct(productId)
   }
 }
@@ -58,7 +58,7 @@ function handleDeleteProduct(productId: string) {
 function handleEditProduct(productId: string) {
   const product = products.value.find((p) => p.id === productId)
   if (product) {
-    const newName = prompt('Nuevo nombre del producto:', product.name)
+    const newName = prompt('New product name:', product.name)
     if (newName && newName.trim()) {
       // TODO: Implement edit functionality in store
       console.log('Edit product:', productId, 'to', newName)
@@ -68,7 +68,7 @@ function handleEditProduct(productId: string) {
 
 function handleEditList() {
   if (list.value) {
-    const newName = prompt('Nuevo nombre de la lista:', list.value.name)
+    const newName = prompt('New list name:', list.value.name)
     if (newName && newName.trim()) {
       console.log('Edit list:', listId.value, 'to', newName)
     }
@@ -98,7 +98,7 @@ if (!list.value) {
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
         <v-text-field
           :model-value="searchQuery"
-          placeholder="Buscar o agregar un producto..."
+          placeholder="Search or add a product..."
           variant="outlined"
           density="comfortable"
           bg-color="white"
@@ -127,18 +127,16 @@ if (!list.value) {
       </div>
 
       <div v-else-if="searchQuery" class="empty-state">
-        <p class="text-body-1 text-medium-emphasis mb-4">No se encontró "{{ searchQuery }}"</p>
+        <p class="text-body-1 text-medium-emphasis mb-4">"{{ searchQuery }}" not found</p>
         <v-btn color="black" elevation="0" @click="handleAddProduct">
-          Agregar "{{ searchQuery }}" a la lista
+          Add "{{ searchQuery }}" to the list
         </v-btn>
       </div>
 
       <div v-else class="empty-state">
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-cart-outline</v-icon>
-        <p class="text-h6 text-medium-emphasis">No hay productos en esta lista</p>
-        <p class="text-body-2 text-medium-emphasis">
-          Usa el buscador arriba para agregar productos
-        </p>
+        <p class="text-h6 text-medium-emphasis">No products in this list</p>
+        <p class="text-body-2 text-medium-emphasis">Use the search bar above to add products</p>
       </div>
     </v-container>
   </div>

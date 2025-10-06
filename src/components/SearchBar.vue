@@ -11,7 +11,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Buscar...',
+  placeholder: 'Search...',
 })
 
 const emit = defineEmits<Emits>()

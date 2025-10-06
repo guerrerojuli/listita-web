@@ -100,14 +100,14 @@ function shareList() {
                   class="menu-icon"
                 />
               </template>
-              <v-list-item-title class="menu-text">Recurrente</v-list-item-title>
+              <v-list-item-title class="menu-text">Recurring</v-list-item-title>
             </v-list-item>
 
             <v-list-item @click="deleteList" class="menu-item menu-item-danger" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Eliminar</v-list-item-title>
+              <v-list-item-title class="menu-text">Delete</v-list-item-title>
             </v-list-item>
 
             <v-divider class="menu-divider" />
@@ -116,21 +116,21 @@ function shareList() {
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Cambiar nombre</v-list-item-title>
+              <v-list-item-title class="menu-text">Rename</v-list-item-title>
             </v-list-item>
 
             <v-list-item @click="togglePrivate" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-lock-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Hacer privada</v-list-item-title>
+              <v-list-item-title class="menu-text">Make private</v-list-item-title>
             </v-list-item>
 
             <v-list-item @click="shareList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-account-multiple-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Compartir</v-list-item-title>
+              <v-list-item-title class="menu-text">Share</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card>

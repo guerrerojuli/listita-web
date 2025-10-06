@@ -57,7 +57,7 @@ const showMenu = ref(false)
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Editar</v-list-item-title>
+              <v-list-item-title class="menu-text">Edit</v-list-item-title>
             </v-list-item>
 
             <v-list-item
@@ -73,7 +73,7 @@ const showMenu = ref(false)
               <template v-slot:prepend>
                 <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Eliminar</v-list-item-title>
+              <v-list-item-title class="menu-text">Delete</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card>
