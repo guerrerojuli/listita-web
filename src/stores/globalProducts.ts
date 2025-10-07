@@ -1,85 +1,58 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { GlobalProduct, Category } from '@/types/globalProduct'
+import { apiFetch } from '@/api/client'
+import type { Product, Category } from '@/types/api'
 
 export const useGlobalProductsStore = defineStore('globalProducts', () => {
   // State
-  const products = ref<GlobalProduct[]>([
-    {
-      id: '1',
-      name: 'Carne',
-      price: 12000,
-      categories: ['Carnes'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Fernet',
-      price: 13000,
-      categories: ['Alcohol', 'Bebidas'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '3',
-      name: 'Mayonesa',
-      price: 3000,
-      categories: ['Aderezos'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ])
-
-  const categories = ref<Category[]>([
-    { id: '1', name: 'Carnes' },
-    { id: '2', name: 'Alcohol' },
-    { id: '3', name: 'Bebidas' },
-    { id: '4', name: 'Aderezos' },
-    { id: '5', name: 'Verduras' },
-    { id: '6', name: 'Frutas' },
-  ])
+  const products = ref<Product[]>([])
+  const categories = ref<Category[]>([])
 
   const searchQuery = ref('')
 
   // Getters
   const filteredProducts = computed(() => {
     if (!searchQuery.value) return products.value
-    return products.value.filter((product) => {
-      const searchLower = searchQuery.value.toLowerCase()
-      return (
-        product.name.toLowerCase().includes(searchLower) ||
-        product.categories.some((cat) => cat.toLowerCase().includes(searchLower))
-      )
-    })
+    const searchLower = searchQuery.value.toLowerCase()
+    return products.value.filter((product) =>
+      product.name.toLowerCase().includes(searchLower) ||
+      product.category.name.toLowerCase().includes(searchLower),
+    )
   })
 
   // Actions
-  function addProduct(name: string, price: number, categories: string[]) {
-    const newProduct: GlobalProduct = {
-      id: Date.now().toString(),
-      name,
-      price,
-      categories,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    products.value.push(newProduct)
+  async function fetchProducts(params?: {
+    name?: string
+    category_id?: number
+    pantry_id?: number
+  }) {
+    const data = await apiFetch<Product[]>('/api/products', { method: 'GET', query: params })
+    products.value = data
   }
 
-  function deleteProduct(id: string) {
+  async function fetchCategories(params?: { name?: string }) {
+    const data = await apiFetch<Category[]>('/api/categories', { method: 'GET', query: params as any })
+    categories.value = data as any
+  }
+
+  async function addProduct(name: string, category_id: number, pantry_id?: number | null, metadata?: any) {
+    const created = await apiFetch<Product>('/api/products', {
+      method: 'POST',
+      json: { name, category_id, pantry_id: pantry_id ?? null, metadata: metadata ?? {} },
+    })
+    products.value.unshift(created)
+  }
+
+  async function deleteProduct(id: number) {
+    await apiFetch(`/api/products/${id}`, { method: 'DELETE' })
     const index = products.value.findIndex((product) => product.id === id)
-    if (index !== -1) {
-      products.value.splice(index, 1)
-    }
+    if (index !== -1) products.value.splice(index, 1)
   }
 
-  function updateProduct(id: string, updates: Partial<GlobalProduct>) {
-    const product = products.value.find((p) => p.id === id)
-    if (product) {
-      Object.assign(product, updates)
-      product.updatedAt = new Date()
-    }
+  async function updateProduct(id: number, updates: { name?: string; category_id?: number; pantry_id?: number | null; metadata?: any }) {
+    const updated = await apiFetch<Product>(`/api/products/${id}`, { method: 'PUT', json: updates })
+    const index = products.value.findIndex((p) => p.id === id)
+    if (index !== -1) products.value[index] = updated
   }
 
   function updateSearch(query: string) {
@@ -91,6 +64,8 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     categories,
     searchQuery,
     filteredProducts,
+    fetchProducts,
+    fetchCategories,
     addProduct,
     deleteProduct,
     updateProduct,

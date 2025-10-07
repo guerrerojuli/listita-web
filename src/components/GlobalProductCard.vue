@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { GlobalProduct } from '@/types/globalProduct'
+import type { Product } from '@/types/api'
 
 interface Props {
-  product: GlobalProduct
+  product: Product
 }
 
 interface Emits {
@@ -18,18 +18,11 @@ const emit = defineEmits<Emits>()
   <div class="product-card">
     <div class="product-main-info">
       <h3 class="product-name">{{ product.name }}</h3>
-      <span class="product-price">${{ product.price.toLocaleString() }}</span>
+      <!-- Price not provided by API spec; keep name/category -->
     </div>
 
     <div class="product-categories">
-      <v-chip
-        v-for="category in product.categories"
-        :key="category"
-        size="small"
-        class="category-chip"
-      >
-        {{ category }}
-      </v-chip>
+      <v-chip size="small" class="category-chip">{{ product.category.name }}</v-chip>
     </div>
 
     <div class="product-actions">

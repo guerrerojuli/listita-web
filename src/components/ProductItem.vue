@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { Product } from '@/types/product'
+import type { ListItem } from '@/types/api'
 
 interface Props {
-  product: Product
+  item: ListItem
 }
 
 interface Emits {
@@ -21,10 +21,10 @@ const showMenu = ref(false)
 </script>
 
 <template>
-  <div class="product-item" :class="{ 'product-completed': product.completed }">
+  <div class="product-item" :class="{ 'product-completed': item.purchased }">
     <div class="product-checkbox">
       <v-checkbox
-        :model-value="product.completed"
+        :model-value="item.purchased"
         hide-details
         density="compact"
         @update:model-value="emit('toggle-complete')"
@@ -32,7 +32,7 @@ const showMenu = ref(false)
     </div>
 
     <div class="product-info">
-      <span class="product-name">{{ product.name }}</span>
+      <span class="product-name">{{ item.product.name }}</span>
     </div>
 
     <div class="product-actions">
@@ -40,10 +40,10 @@ const showMenu = ref(false)
         icon="mdi-minus"
         variant="text"
         size="small"
-        :disabled="product.quantity <= 1"
+        :disabled="item.quantity <= 1"
         @click="emit('decrement')"
       />
-      <span class="product-quantity">{{ product.quantity }}</span>
+      <span class="product-quantity">{{ item.quantity }}</span>
       <v-btn icon="mdi-plus" variant="text" size="small" @click="emit('increment')" />
 
       <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">

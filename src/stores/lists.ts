@@ -1,61 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { ShoppingList } from '@/types/list'
+import { apiFetch } from '@/api/client'
+import type { ShoppingList } from '@/types/api'
 
 export const useListsStore = defineStore('lists', () => {
   // State
-  const lists = ref<ShoppingList[]>([
-    {
-      id: '1',
-      name: 'Asado en lo de Agu',
-      productCount: 8,
-      peopleCount: 4,
-      isRecurrent: true,
-      isShared: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Casa',
-      productCount: 10,
-      peopleCount: undefined,
-      isRecurrent: false,
-      isShared: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '3',
-      name: 'Asado en lo de Jolo',
-      productCount: 0,
-      peopleCount: undefined,
-      isRecurrent: false,
-      isShared: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '4',
-      name: 'Juntada',
-      productCount: 5,
-      peopleCount: 6,
-      isRecurrent: false,
-      isShared: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ])
+  const lists = ref<ShoppingList[]>([])
 
   const searchQuery = ref('')
 
   // Getters
   const recurrentLists = computed(() =>
-    lists.value.filter((list) => list.isRecurrent && matchesSearch(list)),
+    lists.value.filter((list) => list.recurring && matchesSearch(list)),
   )
 
   const activeLists = computed(() =>
-    lists.value.filter((list) => !list.isRecurrent && matchesSearch(list)),
+    lists.value.filter((list) => !list.recurring && matchesSearch(list)),
   )
 
   // Helper function
@@ -65,24 +25,28 @@ export const useListsStore = defineStore('lists', () => {
   }
 
   // Actions
-  function createList(name: string, isRecurrent: boolean = false) {
-    const newList: ShoppingList = {
-      id: Date.now().toString(),
-      name,
-      productCount: 0,
-      isRecurrent,
-      isShared: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    lists.value.push(newList)
+  async function fetchLists(params?: { name?: string; owner?: boolean; recurring?: boolean }) {
+    const data = await apiFetch<{ items?: ShoppingList[] } | ShoppingList[]>('/api/shopping-lists', {
+      method: 'GET',
+      query: params as any,
+    })
+    // Some APIs wrap in {items: []}; handle either
+    const array = Array.isArray(data) ? data : (data.items ?? [])
+    lists.value = array
   }
 
-  function deleteList(id: string) {
+  async function createList(name: string, recurring: boolean = false) {
+    const created = await apiFetch<ShoppingList>('/api/shopping-lists', {
+      method: 'POST',
+      json: { name, description: '', recurring, metadata: {} },
+    })
+    lists.value.unshift(created)
+  }
+
+  async function deleteList(id: number) {
+    await apiFetch(`/api/shopping-lists/${id}`, { method: 'DELETE' })
     const index = lists.value.findIndex((list) => list.id === id)
-    if (index !== -1) {
-      lists.value.splice(index, 1)
-    }
+    if (index !== -1) lists.value.splice(index, 1)
   }
 
   function updateSearch(query: string) {
@@ -97,6 +61,7 @@ export const useListsStore = defineStore('lists', () => {
     recurrentLists,
     activeLists,
     // Actions
+    fetchLists,
     createList,
     deleteList,
     updateSearch,

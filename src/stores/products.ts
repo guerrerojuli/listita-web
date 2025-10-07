@@ -1,94 +1,76 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Product } from '@/types/product'
+import { apiFetch } from '@/api/client'
+import type { ListItem } from '@/types/api'
 
 export const useProductsStore = defineStore('products', () => {
   // State
-  const products = ref<Product[]>([
-    {
-      id: '1',
-      name: 'Carne',
-      quantity: 1,
-      completed: true,
-      listId: '1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Fernet',
-      quantity: 1,
-      completed: false,
-      listId: '1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ])
+  const items = ref<ListItem[]>([])
 
   // Getters
-  function getProductsByListId(listId: string): Product[] {
-    return products.value.filter((product) => product.listId === listId)
+  function getItemsByListId(listId: number): ListItem[] {
+    return items.value.filter((i) => (i as any).listId === listId)
   }
 
   // Actions
-  function addProduct(listId: string, name: string) {
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name,
-      quantity: 1,
-      completed: false,
-      listId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    products.value.push(newProduct)
+  async function loadListItems(listId: number, params?: Record<string, unknown>) {
+    const data = await apiFetch<ListItem[]>(`/api/shopping-lists/${listId}/items`, {
+      method: 'GET',
+      query: params,
+    })
+    // Tag items with listId for local filtering convenience
+    items.value = data.map((d) => Object.assign({}, d, { listId })) as any
   }
 
-  function deleteProduct(id: string) {
-    const index = products.value.findIndex((product) => product.id === id)
-    if (index !== -1) {
-      products.value.splice(index, 1)
-    }
+  async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
+    const created = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items`, {
+      method: 'POST',
+      json: { product_id: productId, quantity, unit },
+    })
+    items.value.unshift(Object.assign({}, created, { listId }) as any)
   }
 
-  function toggleComplete(id: string) {
-    const product = products.value.find((p) => p.id === id)
-    if (product) {
-      product.completed = !product.completed
-      product.updatedAt = new Date()
-    }
+  async function deleteItem(listId: number, itemId: number) {
+    await apiFetch(`/api/shopping-lists/${listId}/items/${itemId}`, { method: 'DELETE' })
+    const index = items.value.findIndex((i) => i.id === itemId)
+    if (index !== -1) items.value.splice(index, 1)
   }
 
-  function updateQuantity(id: string, quantity: number) {
-    const product = products.value.find((p) => p.id === id)
-    if (product && quantity > 0) {
-      product.quantity = quantity
-      product.updatedAt = new Date()
-    }
+  async function setPurchased(listId: number, itemId: number, purchased: boolean) {
+    const updated = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items/${itemId}`, {
+      method: 'PATCH',
+      json: { purchased },
+    })
+    const idx = items.value.findIndex((i) => i.id === itemId)
+    if (idx !== -1) items.value[idx] = Object.assign({}, updated, { listId }) as any
   }
 
-  function incrementQuantity(id: string) {
-    const product = products.value.find((p) => p.id === id)
-    if (product) {
-      product.quantity++
-      product.updatedAt = new Date()
-    }
+  async function updateQuantity(listId: number, itemId: number, quantity: number, unit?: string) {
+    const updated = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items/${itemId}`, {
+      method: 'PUT',
+      json: { quantity, ...(unit ? { unit } : {}) },
+    })
+    const idx = items.value.findIndex((i) => i.id === itemId)
+    if (idx !== -1) items.value[idx] = Object.assign({}, updated, { listId }) as any
   }
 
-  function decrementQuantity(id: string) {
-    const product = products.value.find((p) => p.id === id)
-    if (product && product.quantity > 1) {
-      product.quantity--
-      product.updatedAt = new Date()
-    }
+  function incrementQuantity(listId: number, itemId: number) {
+    const item = items.value.find((i) => i.id === itemId)
+    if (item) updateQuantity(listId, itemId, item.quantity + 1, item.unit)
+  }
+
+  function decrementQuantity(listId: number, itemId: number) {
+    const item = items.value.find((i) => i.id === itemId)
+    if (item && item.quantity > 1) updateQuantity(listId, itemId, item.quantity - 1, item.unit)
   }
 
   return {
-    products,
-    getProductsByListId,
-    addProduct,
-    deleteProduct,
-    toggleComplete,
+    items,
+    loadListItems,
+    getItemsByListId,
+    addItem,
+    deleteItem,
+    setPurchased,
     updateQuantity,
     incrementQuantity,
     decrementQuantity,

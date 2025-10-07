@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+function handleLogout() {
+  auth.logout()
+}
 </script>
 
 <template>
@@ -17,7 +23,10 @@ import { RouterLink } from 'vue-router'
         </RouterLink>
       </div>
 
-      <v-btn icon="mdi-account-circle" variant="text" size="large" />
+      <v-btn v-if="auth.isAuthenticated" variant="text" size="large" @click="handleLogout">
+        Logout
+      </v-btn>
+      <RouterLink v-else to="/login" class="nav-link">Login</RouterLink>
     </v-container>
   </v-app-bar>
 </template>

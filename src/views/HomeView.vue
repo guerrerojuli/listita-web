@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SearchBar from '@/components/SearchBar.vue'
 import ListCard from '@/components/ListCard.vue'
@@ -37,12 +37,12 @@ function handleToggleRecurrent(listId: string) {
 
 function handleDeleteList(listId: string) {
   if (confirm('Are you sure you want to delete this list?')) {
-    listsStore.deleteList(listId)
+    listsStore.deleteList(Number(listId))
   }
 }
 
 function handleRenameList(listId: string) {
-  const list = listsStore.lists.find((l) => l.id === listId)
+  const list = listsStore.lists.find((l) => l.id === Number(listId))
   if (list) {
     const newName = prompt('New list name:', list.name)
     if (newName && newName.trim()) {
@@ -61,6 +61,10 @@ function handleShareList(listId: string) {
   // TODO: Implement share functionality
   console.log('Share list:', listId)
 }
+
+onMounted(() => {
+  listsStore.fetchLists().catch(() => {})
+})
 </script>
 
 <template>
@@ -85,12 +89,12 @@ function handleShareList(listId: string) {
             :key="list.id"
             :list="list"
             :is-highlighted="true"
-            @click="handleListClick(list.id)"
-            @toggle-recurrent="handleToggleRecurrent(list.id)"
-            @delete="handleDeleteList(list.id)"
-            @rename="handleRenameList(list.id)"
-            @toggle-private="handleTogglePrivate(list.id)"
-            @share="handleShareList(list.id)"
+            @click="handleListClick(String(list.id))"
+            @toggle-recurrent="handleToggleRecurrent(String(list.id))"
+            @delete="handleDeleteList(String(list.id))"
+            @rename="handleRenameList(String(list.id))"
+            @toggle-private="handleTogglePrivate(String(list.id))"
+            @share="handleShareList(String(list.id))"
           />
         </div>
       </div>
@@ -102,12 +106,12 @@ function handleShareList(listId: string) {
             v-for="list in activeLists"
             :key="list.id"
             :list="list"
-            @click="handleListClick(list.id)"
-            @toggle-recurrent="handleToggleRecurrent(list.id)"
-            @delete="handleDeleteList(list.id)"
-            @rename="handleRenameList(list.id)"
-            @toggle-private="handleTogglePrivate(list.id)"
-            @share="handleShareList(list.id)"
+            @click="handleListClick(String(list.id))"
+            @toggle-recurrent="handleToggleRecurrent(String(list.id))"
+            @delete="handleDeleteList(String(list.id))"
+            @rename="handleRenameList(String(list.id))"
+            @toggle-private="handleTogglePrivate(String(list.id))"
+            @share="handleShareList(String(list.id))"
           />
         </div>
       </div>

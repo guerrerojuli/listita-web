@@ -10,49 +10,40 @@ const { searchQuery, filteredProducts } = storeToRefs(productsStore)
 const dialog = ref(false)
 const editDialog = ref(false)
 const newProductName = ref('')
-const newProductPrice = ref(0)
-const newProductCategories = ref<string[]>([])
+const newProductCategoryId = ref<number | null>(null)
 
 const editingProduct = ref<any>(null)
 const editProductName = ref('')
-const editProductPrice = ref(0)
-const editProductCategories = ref<string[]>([])
+const editProductCategoryId = ref<number | null>(null)
 
 function handleAddProduct() {
   dialog.value = true
 }
 
-function createNewProduct() {
-  if (newProductName.value.trim() && newProductPrice.value > 0) {
-    productsStore.addProduct(
-      newProductName.value.trim(),
-      newProductPrice.value,
-      newProductCategories.value,
-    )
+async function createNewProduct() {
+  if (newProductName.value.trim() && newProductCategoryId.value) {
+    await productsStore.addProduct(newProductName.value.trim(), newProductCategoryId.value)
     newProductName.value = ''
-    newProductPrice.value = 0
-    newProductCategories.value = []
+    newProductCategoryId.value = null
     dialog.value = false
   }
 }
 
 function handleEditProduct(productId: string) {
-  const product = productsStore.products.find((p) => p.id === productId)
+  const product = productsStore.products.find((p) => String(p.id) === productId)
   if (product) {
     editingProduct.value = product
     editProductName.value = product.name
-    editProductPrice.value = product.price
-    editProductCategories.value = [...product.categories]
+    editProductCategoryId.value = product.category.id
     editDialog.value = true
   }
 }
 
-function updateProduct() {
-  if (editingProduct.value && editProductName.value.trim() && editProductPrice.value > 0) {
-    productsStore.updateProduct(editingProduct.value.id, {
+async function updateProduct() {
+  if (editingProduct.value && editProductName.value.trim() && editProductCategoryId.value) {
+    await productsStore.updateProduct(editingProduct.value.id, {
       name: editProductName.value.trim(),
-      price: editProductPrice.value,
-      categories: editProductCategories.value,
+      category_id: editProductCategoryId.value,
     })
     editDialog.value = false
     editingProduct.value = null
@@ -61,9 +52,13 @@ function updateProduct() {
 
 function handleDeleteProduct(productId: string) {
   if (confirm('Are you sure you want to delete this product?')) {
-    productsStore.deleteProduct(productId)
+    productsStore.deleteProduct(Number(productId))
   }
 }
+
+// load initial data
+productsStore.fetchCategories().catch(() => {})
+productsStore.fetchProducts().catch(() => {})
 </script>
 
 <template>
@@ -93,8 +88,8 @@ function handleDeleteProduct(productId: string) {
             v-for="product in filteredProducts"
             :key="product.id"
             :product="product"
-            @edit="handleEditProduct(product.id)"
-            @delete="handleDeleteProduct(product.id)"
+            @edit="handleEditProduct(String(product.id))"
+            @delete="handleDeleteProduct(String(product.id))"
           />
         </div>
       </div>
@@ -125,29 +120,16 @@ function handleDeleteProduct(productId: string) {
             </div>
 
             <div class="form-field">
-              <label class="field-label">Price</label>
-              <v-text-field
-                v-model.number="newProductPrice"
+              <label class="field-label">Category</label>
+              <v-select
+                v-model="newProductCategoryId"
+                :items="productsStore.categories"
+                item-title="name"
+                item-value="id"
                 variant="outlined"
                 density="comfortable"
-                type="number"
                 hide-details
-                placeholder="0"
-              />
-            </div>
-
-            <div class="form-field">
-              <label class="field-label">Categories</label>
-              <v-combobox
-                v-model="newProductCategories"
-                :items="productsStore.categories.map((c) => c.name)"
-                variant="outlined"
-                density="comfortable"
-                multiple
-                chips
-                closable-chips
-                hide-details
-                placeholder="Enter one or more categories"
+                placeholder="Select a category"
               />
             </div>
           </v-card-text>
@@ -157,7 +139,7 @@ function handleDeleteProduct(productId: string) {
             <v-btn
               class="btn-add"
               elevation="0"
-              :disabled="!newProductName.trim() || newProductPrice <= 0"
+              :disabled="!newProductName.trim() || !newProductCategoryId"
               @click="createNewProduct"
             >
               Add
@@ -187,29 +169,16 @@ function handleDeleteProduct(productId: string) {
             </div>
 
             <div class="form-field">
-              <label class="field-label">Price</label>
-              <v-text-field
-                v-model.number="editProductPrice"
+              <label class="field-label">Category</label>
+              <v-select
+                v-model="editProductCategoryId"
+                :items="productsStore.categories"
+                item-title="name"
+                item-value="id"
                 variant="outlined"
                 density="comfortable"
-                type="number"
                 hide-details
-                placeholder="0"
-              />
-            </div>
-
-            <div class="form-field">
-              <label class="field-label">Categories</label>
-              <v-combobox
-                v-model="editProductCategories"
-                :items="productsStore.categories.map((c) => c.name)"
-                variant="outlined"
-                density="comfortable"
-                multiple
-                chips
-                closable-chips
-                hide-details
-                placeholder="Enter one or more categories"
+                placeholder="Select a category"
               />
             </div>
           </v-card-text>
@@ -232,7 +201,7 @@ function handleDeleteProduct(productId: string) {
             <v-btn
               class="btn-add"
               elevation="0"
-              :disabled="!editProductName.trim() || editProductPrice <= 0"
+              :disabled="!editProductName.trim() || !editProductCategoryId"
               @click="updateProduct"
             >
               Save

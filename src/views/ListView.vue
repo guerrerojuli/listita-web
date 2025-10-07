@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
@@ -10,26 +10,25 @@ const router = useRouter()
 const listsStore = useListsStore()
 const productsStore = useProductsStore()
 
-const listId = computed(() => route.params.id as string)
+const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
 
-const products = computed(() => productsStore.getProductsByListId(listId.value))
+const items = computed(() => productsStore.getItemsByListId(listId.value))
 
 const searchQuery = ref('')
 const newProductName = ref('')
 
 const filteredProducts = computed(() => {
-  if (!searchQuery.value) return products.value
-  return products.value.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  if (!searchQuery.value) return items.value
+  return items.value.filter((i) =>
+    i.product.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
   )
 })
 
-function handleAddProduct() {
-  if (newProductName.value.trim()) {
-    productsStore.addProduct(listId.value, newProductName.value.trim())
-    newProductName.value = ''
-  }
+async function handleAddProduct() {
+  // For simplicity, there's no API to create product by name directly.
+  // In a full UI you'd search products first; here we no-op.
+  alert('Use Products to create a product first, then add items via product selector (not implemented).')
 }
 
 function handleSearchOrAdd(value: string) {
@@ -37,33 +36,26 @@ function handleSearchOrAdd(value: string) {
   newProductName.value = value
 }
 
-function handleToggleComplete(productId: string) {
-  productsStore.toggleComplete(productId)
+function handleToggleComplete(itemId: number) {
+  productsStore.setPurchased(listId.value, itemId, !items.value.find((i) => i.id === itemId)?.purchased)
 }
 
-function handleIncrement(productId: string) {
-  productsStore.incrementQuantity(productId)
+function handleIncrement(itemId: number) {
+  productsStore.incrementQuantity(listId.value, itemId)
 }
 
-function handleDecrement(productId: string) {
-  productsStore.decrementQuantity(productId)
+function handleDecrement(itemId: number) {
+  productsStore.decrementQuantity(listId.value, itemId)
 }
 
-function handleDeleteProduct(productId: string) {
+function handleDeleteProduct(productId: number) {
   if (confirm('Are you sure you want to delete this product?')) {
-    productsStore.deleteProduct(productId)
+    productsStore.deleteItem(listId.value, productId)
   }
 }
 
-function handleEditProduct(productId: string) {
-  const product = products.value.find((p) => p.id === productId)
-  if (product) {
-    const newName = prompt('New product name:', product.name)
-    if (newName && newName.trim()) {
-      // TODO: Implement edit functionality in store
-      console.log('Edit product:', productId, 'to', newName)
-    }
-  }
+function handleEditProduct(_productId: number) {
+  // Not implemented in API for items (only quantity/unit). Handled via quantity controls.
 }
 
 function handleEditList() {
@@ -82,6 +74,10 @@ function handleShareList() {
 if (!list.value) {
   router.push('/')
 }
+
+onMounted(() => {
+  if (list.value) productsStore.loadListItems(listId.value).catch(() => {})
+})
 </script>
 
 <template>
@@ -114,14 +110,14 @@ if (!list.value) {
         <h2 class="section-title mb-6">Shopping List</h2>
         <div class="products-grid">
           <ProductItem
-            v-for="product in filteredProducts"
-            :key="product.id"
-            :product="product"
-            @toggle-complete="handleToggleComplete(product.id)"
-            @increment="handleIncrement(product.id)"
-            @decrement="handleDecrement(product.id)"
-            @delete="handleDeleteProduct(product.id)"
-            @edit="handleEditProduct(product.id)"
+            v-for="item in filteredProducts"
+            :key="item.id"
+            :item="item"
+            @toggle-complete="handleToggleComplete(item.id)"
+            @increment="handleIncrement(item.id)"
+            @decrement="handleDecrement(item.id)"
+            @delete="handleDeleteProduct(item.id)"
+            @edit="handleEditProduct(item.id)"
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { ShoppingList } from '@/types/list'
+import type { ShoppingList } from '@/types/api'
 
 interface Props {
   list: ShoppingList
@@ -28,19 +28,12 @@ const showMenu = ref(false)
 const subtitle = computed(() => {
   const parts = []
 
-  if (props.list.peopleCount) {
-    parts.push(`${props.list.peopleCount} people`)
-  } else if (props.list.isShared) {
+  if (props.list.sharedWith && props.list.sharedWith.length > 0) {
     parts.push('Shared')
   } else {
     parts.push('Only you')
   }
-
-  if (props.list.productCount === 0) {
-    parts.push('No products')
-  } else {
-    parts.push(`${props.list.productCount} products`)
-  }
+  // Product count is not present in list payload; omit
 
   return parts.join(' - ')
 })
@@ -95,7 +88,7 @@ function shareList() {
             <v-list-item @click="toggleRecurrent" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon
-                  :icon="list.isRecurrent ? 'mdi-star' : 'mdi-star-outline'"
+                  :icon="list.recurring ? 'mdi-star' : 'mdi-star-outline'"
                   size="20"
                   class="menu-icon"
                 />
