@@ -16,16 +16,16 @@ This document tracks the implementation status of all REST API endpoints from th
 ### Users
 | Method | Endpoint | Description | Store | Function | Status |
 |--------|----------|-------------|-------|----------|--------|
-| POST | `/api/users/register` | Register new user | - | - | ❌ |
+| POST | `/api/users/register` | Register new user | `auth` | `register()` | ✅ |
 | POST | `/api/users/login` | Log user in | `auth` | `login()` | ✅ |
 | POST | `/api/users/logout` | Log user out | `auth` | `logout()` | ✅ |
-| GET | `/api/users/profile` | Get user information | - | - | ❌ |
-| PUT | `/api/users/profile` | Update user profile | - | - | ❌ |
-| POST | `/api/users/verify-account` | Verify user account | - | - | ❌ |
-| POST | `/api/users/forgot-password` | Send password recovery | - | - | ❌ |
+| GET | `/api/users/profile` | Get user information | `auth` | `fetchProfile()` | ✅ |
+| PUT | `/api/users/profile` | Update user profile | `auth` | `updateProfile()` | ✅ |
+| POST | `/api/users/verify-account` | Verify user account | `auth` | `verifyAccount()` | ✅ |
+| POST | `/api/users/forgot-password` | Send password recovery | `auth` | `forgotPassword()` | ✅ |
 | POST | `/api/users/reset-password` | Reset user password | - | - | ❌ |
-| POST | `/api/users/send-verification` | Send verification token | - | - | ❌ |
-| POST | `/api/users/change-password` | Change user password | - | - | ❌ |
+| POST | `/api/users/send-verification` | Send verification token | `auth` | `sendVerification()` | ✅ |
+| POST | `/api/users/change-password` | Change user password | `auth` | `changePassword()` | ✅ |
 
 ---
 
@@ -33,11 +33,11 @@ This document tracks the implementation status of all REST API endpoints from th
 
 | Method | Endpoint | Description | Store | Function | Status |
 |--------|----------|-------------|-------|----------|--------|
-| POST | `/api/categories` | Create new category | - | - | ❌ |
+| POST | `/api/categories` | Create new category | `globalProducts` | `createCategory()` | ✅ |
 | GET | `/api/categories` | Get all categories | `globalProducts` | `fetchCategories()` | ✅ |
 | GET | `/api/categories/{id}` | Get specific category | - | - | ❌ |
-| PUT | `/api/categories/{id}` | Update category | - | - | ❌ |
-| DELETE | `/api/categories/{id}` | Delete category | - | - | ❌ |
+| PUT | `/api/categories/{id}` | Update category | `globalProducts` | `updateCategory()` | ✅ |
+| DELETE | `/api/categories/{id}` | Delete category | `globalProducts` | `deleteCategory()` | ✅ |
 
 **Query Parameters (GET /api/categories):**
 - `name` - Filter by name
@@ -75,15 +75,15 @@ This document tracks the implementation status of all REST API endpoints from th
 |--------|----------|-------------|-------|----------|--------|
 | POST | `/api/shopping-lists` | Create shopping list | `lists` | `createList()` | ✅ |
 | GET | `/api/shopping-lists` | Get all shopping lists | `lists` | `fetchLists()` | ✅ |
-| GET | `/api/shopping-lists/{id}` | Get shopping list by ID | - | - | ❌ |
-| PUT | `/api/shopping-lists/{id}` | Update shopping list | - | - | ❌ |
+| GET | `/api/shopping-lists/{id}` | Get shopping list by ID | `lists` | `getListById()` | ✅ |
+| PUT | `/api/shopping-lists/{id}` | Update shopping list | `lists` | `updateList()` | ✅ |
 | DELETE | `/api/shopping-lists/{id}` | Delete shopping list | `lists` | `deleteList()` | ✅ |
-| POST | `/api/shopping-lists/{id}/purchase` | Mark list as purchased | - | - | ❌ |
-| POST | `/api/shopping-lists/{id}/reset` | Reset all items to unpurchased | - | - | ❌ |
-| POST | `/api/shopping-lists/{id}/move-to-pantry` | Move purchased items to pantry | - | - | ❌ |
-| POST | `/api/shopping-lists/{id}/share` | Share list with user by email | - | - | ❌ |
-| GET | `/api/shopping-lists/{id}/shared-users` | Get users list is shared with | - | - | ❌ |
-| DELETE | `/api/shopping-lists/{id}/share/{user_id}` | Revoke user access | - | - | ❌ |
+| POST | `/api/shopping-lists/{id}/purchase` | Mark list as purchased | `lists` | `purchaseList()` | ✅ |
+| POST | `/api/shopping-lists/{id}/reset` | Reset all items to unpurchased | `lists` | `resetListItems()` | ✅ |
+| POST | `/api/shopping-lists/{id}/move-to-pantry` | Move purchased items to pantry | `lists` | `moveToPantry()` | ✅ |
+| POST | `/api/shopping-lists/{id}/share` | Share list with user by email | `lists` | `shareList()` | ✅ |
+| GET | `/api/shopping-lists/{id}/shared-users` | Get users list is shared with | `lists` | `getSharedUsers()` | ✅ |
+| DELETE | `/api/shopping-lists/{id}/share/{user_id}` | Revoke user access | `lists` | `revokeAccess()` | ✅ |
 
 **Query Parameters (GET /api/shopping-lists):**
 - `name` - Filter by name
@@ -163,9 +163,9 @@ This document tracks the implementation status of all REST API endpoints from th
 
 | Method | Endpoint | Description | Store | Function | Status |
 |--------|----------|-------------|-------|----------|--------|
-| GET | `/api/purchases` | Get purchase history | - | - | ❌ |
-| GET | `/api/purchases/{id}` | Get purchase details | - | - | ❌ |
-| POST | `/api/purchases/{id}/restore` | Restore purchase to new list | - | - | ❌ |
+| GET | `/api/purchases` | Get purchase history | `purchases` | `fetchPurchases()` | ✅ |
+| GET | `/api/purchases/{id}` | Get purchase details | `purchases` | `getPurchaseById()` | ✅ |
+| POST | `/api/purchases/{id}/restore` | Restore purchase to new list | `purchases` | `restorePurchase()` | ✅ |
 
 **Query Parameters (GET /api/purchases):**
 - `list_id` - Filter by shopping list ID
@@ -180,21 +180,20 @@ This document tracks the implementation status of all REST API endpoints from th
 
 ### By Feature Area:
 
-**Authentication (1/10)** - 10% Complete
-- ✅ Login, Logout
-- ❌ Register, Profile, Password Management, Verification
+**Authentication (9/10)** - 90% Complete
+- ✅ Register, Login, Logout, Profile (Get/Update), Verification, Password Management (Change/Forgot)
+- ❌ Reset password (requires recovery code from email)
 
-**Categories (1/5)** - 20% Complete
-- ✅ List categories
-- ❌ Create, Update, Delete, Get by ID
+**Categories (4/5)** - 80% Complete
+- ✅ List, Create, Update, Delete
+- ❌ Get by ID
 
 **Products (4/5)** - 80% Complete
 - ✅ List, Create, Update, Delete
 - ❌ Get by ID
 
-**Shopping Lists (3/12)** - 25% Complete
-- ✅ List, Create, Delete
-- ❌ Get by ID, Update, Purchase, Reset, Share, Move to Pantry
+**Shopping Lists (12/12)** - 100% Complete ✅
+- ✅ List, Create, Delete, Get by ID, Update, Purchase, Reset, Share, Get Shared Users, Revoke Access, Move to Pantry
 
 **Shopping List Items (5/5)** - 100% Complete ✅
 - ✅ List, Create, Update, Toggle Purchase, Delete
@@ -205,10 +204,10 @@ This document tracks the implementation status of all REST API endpoints from th
 **Pantry Items (0/4)** - 0% Complete
 - ❌ All pantry item endpoints
 
-**Purchase History (0/3)** - 0% Complete
-- ❌ All purchase history endpoints
+**Purchase History (3/3)** - 100% Complete ✅
+- ✅ Get purchase history, Get purchase details, Restore purchase
 
-### Overall Progress: 14/52 endpoints = **27% Complete**
+### Overall Progress: 37/52 endpoints = **71% Complete**
 
 ---
 
@@ -218,8 +217,8 @@ This document tracks the implementation status of all REST API endpoints from th
 - **Lists Store:** `src/stores/lists.ts`
 - **Products Store (List Items):** `src/stores/products.ts`
 - **Global Products Store:** `src/stores/globalProducts.ts`
+- **Purchases Store:** `src/stores/purchases.ts`
 - **Pantries Store:** Not created yet
-- **Purchases Store:** Not created yet
 
 ---
 
@@ -227,18 +226,32 @@ This document tracks the implementation status of all REST API endpoints from th
 
 1. **Missing Store Files:**
    - Pantries store needs to be created
-   - Purchases/history store needs to be created
-   - User profile store needs to be created
 
 2. **Incomplete Features:**
-   - Shopping list update (rename, change recurring status)
-   - Sharing functionality for lists and pantries
-   - Purchase history tracking
-   - Moving items to pantry
-   - Category management UI
+   - Password reset (requires implementing email verification code flow)
+   - Pantry management (not yet implemented)
 
-3. **Store Naming:**
+3. **Recently Implemented:**
+   - ✅ Category management (create, update, delete) in Products page
+   - ✅ Purchase history tracking and display in Home page (list menu)
+   - ✅ Restore purchases to new shopping lists
+   - ✅ Shopping list rename and update (name, recurring status)
+   - ✅ Toggle recurring status from list cards in Home page
+   - ✅ Share list functionality via email (Home page and List page)
+   - ✅ Mark list as purchased (saves to history, redirects to home)
+   - ✅ Reset all list items to unpurchased
+   - ✅ Move purchased items to pantry (API ready, UI in list menu)
+
+4. **Store Naming:**
    - `products` store actually manages **List Items** (items in shopping lists)
    - `globalProducts` store manages the **Products catalog** and **Categories**
    - Consider renaming for clarity in future refactoring
+
+5. **New User Features Implemented:**
+   - ✅ Registration page (`/register`) with automatic verification email
+   - ✅ Login page with forgot password functionality
+   - ✅ User profile fetching on login and displayed in navbar
+   - ✅ Profile edit dialog in navbar (update name/surname)
+   - ✅ Change password dialog in navbar
+   - ✅ Automatic profile loading on app mount when authenticated
 

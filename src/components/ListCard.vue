@@ -15,6 +15,7 @@ interface Emits {
   (e: 'rename'): void
   (e: 'toggle-private'): void
   (e: 'share'): void
+  (e: 'view-history'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -60,6 +61,11 @@ function togglePrivate() {
 
 function shareList() {
   emit('share')
+  showMenu.value = false
+}
+
+function viewHistory() {
+  emit('view-history')
   showMenu.value = false
 }
 </script>
@@ -124,6 +130,15 @@ function shareList() {
                 <v-icon icon="mdi-account-multiple-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Share</v-list-item-title>
+            </v-list-item>
+
+            <v-divider class="menu-divider" />
+
+            <v-list-item @click="viewHistory" class="menu-item" rounded="lg">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-history" size="20" class="menu-icon" />
+              </template>
+              <v-list-item-title class="menu-text">Purchase History</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card>

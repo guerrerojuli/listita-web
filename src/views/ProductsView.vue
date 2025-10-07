@@ -16,8 +16,30 @@ const editingProduct = ref<any>(null)
 const editProductName = ref('')
 const editProductCategoryId = ref<number | null>(null)
 
+const categoryDialog = ref(false)
+const newCategoryName = ref('')
+const categoryError = ref('')
+
 function handleAddProduct() {
   dialog.value = true
+}
+
+function handleAddCategory() {
+  newCategoryName.value = ''
+  categoryError.value = ''
+  categoryDialog.value = true
+}
+
+async function createNewCategory() {
+  if (newCategoryName.value.trim()) {
+    try {
+      await productsStore.createCategory(newCategoryName.value.trim())
+      newCategoryName.value = ''
+      categoryDialog.value = false
+    } catch (err: any) {
+      categoryError.value = 'Failed to create category'
+    }
+  }
 }
 
 async function createNewProduct() {
@@ -66,7 +88,12 @@ productsStore.fetchProducts().catch(() => {})
     <v-container class="py-8">
       <div class="d-flex align-center justify-space-between mb-8">
         <h1 class="page-title">Products</h1>
-        <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct"> Add Product </v-btn>
+        <div class="d-flex gap-3">
+          <v-btn class="add-product-btn" elevation="0" @click="handleAddCategory">
+            Add Category
+          </v-btn>
+          <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct"> Add Product </v-btn>
+        </div>
       </div>
 
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
@@ -205,6 +232,45 @@ productsStore.fetchProducts().catch(() => {})
               @click="updateProduct"
             >
               Save
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- Dialog for adding new category -->
+      <v-dialog v-model="categoryDialog" max-width="500" persistent>
+        <v-card class="product-dialog">
+          <div class="dialog-header">
+            <h2 class="dialog-title">Add category</h2>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="categoryDialog = false" />
+          </div>
+
+          <v-card-text class="dialog-content">
+            <v-alert v-if="categoryError" type="error" class="mb-4" density="comfortable">
+              {{ categoryError }}
+            </v-alert>
+            <div class="form-field">
+              <label class="field-label">Category Name</label>
+              <v-text-field
+                v-model="newCategoryName"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                placeholder="Enter category name"
+                @keyup.enter="createNewCategory"
+              />
+            </div>
+          </v-card-text>
+
+          <v-card-actions class="dialog-actions">
+            <v-btn class="btn-cancel" elevation="0" @click="categoryDialog = false"> Cancel </v-btn>
+            <v-btn
+              class="btn-add"
+              elevation="0"
+              :disabled="!newCategoryName.trim()"
+              @click="createNewCategory"
+            >
+              Add
             </v-btn>
           </v-card-actions>
         </v-card>

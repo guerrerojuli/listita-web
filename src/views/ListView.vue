@@ -58,17 +58,46 @@ function handleEditProduct(_productId: number) {
   // Not implemented in API for items (only quantity/unit). Handled via quantity controls.
 }
 
-function handleEditList() {
+async function handleEditList() {
   if (list.value) {
     const newName = prompt('New list name:', list.value.name)
     if (newName && newName.trim()) {
-      console.log('Edit list:', listId.value, 'to', newName)
+      await listsStore.updateList(listId.value, { name: newName.trim() })
+    }
+  }
+}
+
+async function handlePurchaseList() {
+  if (confirm('Mark this list as purchased? This will save it to history.')) {
+    try {
+      await listsStore.purchaseList(listId.value)
+      alert('List purchased successfully!')
+      router.push('/')
+    } catch (err) {
+      alert('Failed to purchase list')
+    }
+  }
+}
+
+async function handleResetList() {
+  if (confirm('Reset all items to unpurchased?')) {
+    try {
+      await listsStore.resetListItems(listId.value)
+      await productsStore.loadListItems(listId.value)
+    } catch (err) {
+      alert('Failed to reset list')
     }
   }
 }
 
 function handleShareList() {
-  console.log('Share list:', listId.value)
+  const email = prompt('Enter email address to share with:')
+  if (email && email.trim()) {
+    listsStore
+      .shareList(listId.value, email.trim())
+      .then(() => alert('List shared successfully!'))
+      .catch(() => alert('Failed to share list'))
+  }
 }
 
 if (!list.value) {
@@ -86,8 +115,38 @@ onMounted(() => {
       <div class="d-flex align-center justify-space-between mb-8">
         <h1 class="page-title">{{ list.name }}</h1>
         <div class="header-actions">
-          <v-btn icon="mdi-pencil-outline" variant="text" @click="handleEditList" />
-          <v-btn icon="mdi-share-variant-outline" variant="text" @click="handleShareList" />
+          <v-menu>
+            <template v-slot:activator="{ props }">
+              <v-btn icon="mdi-dots-vertical" variant="text" v-bind="props" />
+            </template>
+            <v-list>
+              <v-list-item @click="handleEditList">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-pencil-outline" />
+                </template>
+                <v-list-item-title>Rename</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="handleShareList">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-share-variant-outline" />
+                </template>
+                <v-list-item-title>Share</v-list-item-title>
+              </v-list-item>
+              <v-divider />
+              <v-list-item @click="handleResetList">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-refresh" />
+                </template>
+                <v-list-item-title>Reset Items</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="handlePurchaseList">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-cart-check" />
+                </template>
+                <v-list-item-title>Mark as Purchased</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </div>
       </div>
 

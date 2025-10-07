@@ -5,14 +5,22 @@ import { useRouter } from 'vue-router'
 import SearchBar from '@/components/SearchBar.vue'
 import ListCard from '@/components/ListCard.vue'
 import { useListsStore } from '@/stores/lists'
+import { usePurchasesStore } from '@/stores/purchases'
 
 const router = useRouter()
 
 const listsStore = useListsStore()
+const purchasesStore = usePurchasesStore()
 const { searchQuery, recurrentLists, activeLists } = storeToRefs(listsStore)
 
 const dialog = ref(false)
 const newListName = ref('')
+const showPurchasesDialog = ref(false)
+const selectedListForHistory = ref<number | null>(null)
+const showShareDialog = ref(false)
+const shareEmail = ref('')
+const shareListId = ref<number | null>(null)
+const shareError = ref('')
 
 function handleNewList() {
   dialog.value = true
@@ -30,9 +38,11 @@ function handleListClick(listId: string) {
   router.push(`/list/${listId}`)
 }
 
-function handleToggleRecurrent(listId: string) {
-  // TODO: Toggle recurrent status
-  console.log('Toggle recurrent for list:', listId)
+async function handleToggleRecurrent(listId: string) {
+  const list = listsStore.lists.find((l) => l.id === Number(listId))
+  if (list) {
+    await listsStore.updateList(Number(listId), { recurring: !list.recurring })
+  }
 }
 
 function handleDeleteList(listId: string) {
@@ -41,13 +51,12 @@ function handleDeleteList(listId: string) {
   }
 }
 
-function handleRenameList(listId: string) {
+async function handleRenameList(listId: string) {
   const list = listsStore.lists.find((l) => l.id === Number(listId))
   if (list) {
     const newName = prompt('New list name:', list.name)
     if (newName && newName.trim()) {
-      // TODO: Implement rename functionality in store
-      console.log('Rename list:', listId, 'to', newName)
+      await listsStore.updateList(Number(listId), { name: newName.trim() })
     }
   }
 }
@@ -58,8 +67,41 @@ function handleTogglePrivate(listId: string) {
 }
 
 function handleShareList(listId: string) {
-  // TODO: Implement share functionality
-  console.log('Share list:', listId)
+  shareListId.value = Number(listId)
+  shareEmail.value = ''
+  shareError.value = ''
+  showShareDialog.value = true
+}
+
+async function submitShareList() {
+  if (shareListId.value && shareEmail.value.trim()) {
+    try {
+      await listsStore.shareList(shareListId.value, shareEmail.value.trim())
+      showShareDialog.value = false
+      alert('List shared successfully!')
+    } catch (err: any) {
+      shareError.value = err.message || 'Failed to share list'
+    }
+  }
+}
+
+function handleViewPurchaseHistory(listId: string) {
+  selectedListForHistory.value = Number(listId)
+  purchasesStore.fetchPurchases({ list_id: Number(listId) })
+  showPurchasesDialog.value = true
+}
+
+async function handleRestorePurchase(purchaseId: number) {
+  if (confirm('Restore this purchase as a new shopping list?')) {
+    try {
+      await purchasesStore.restorePurchase(purchaseId)
+      await listsStore.fetchLists()
+      showPurchasesDialog.value = false
+      alert('Purchase restored successfully!')
+    } catch (err) {
+      alert('Failed to restore purchase')
+    }
+  }
 }
 
 onMounted(() => {
@@ -95,6 +137,7 @@ onMounted(() => {
             @rename="handleRenameList(String(list.id))"
             @toggle-private="handleTogglePrivate(String(list.id))"
             @share="handleShareList(String(list.id))"
+            @view-history="handleViewPurchaseHistory(String(list.id))"
           />
         </div>
       </div>
@@ -112,6 +155,7 @@ onMounted(() => {
             @rename="handleRenameList(String(list.id))"
             @toggle-private="handleTogglePrivate(String(list.id))"
             @share="handleShareList(String(list.id))"
+            @view-history="handleViewPurchaseHistory(String(list.id))"
           />
         </div>
       </div>
@@ -144,6 +188,85 @@ onMounted(() => {
               @click="createNewList"
             >
               Create
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- Dialog for purchase history -->
+      <v-dialog v-model="showPurchasesDialog" max-width="800">
+        <v-card>
+          <v-card-title class="text-h5">Purchase History</v-card-title>
+          <v-card-text>
+            <div v-if="purchasesStore.loading" class="text-center py-8">
+              <v-progress-circular indeterminate color="primary" />
+            </div>
+            <div v-else-if="purchasesStore.purchases.length === 0" class="text-center py-8">
+              <p class="text-body-1 text-medium-emphasis">No purchase history for this list</p>
+            </div>
+            <v-list v-else>
+              <v-list-item
+                v-for="purchase in purchasesStore.purchases"
+                :key="purchase.id"
+                class="mb-2"
+                border
+                rounded
+              >
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-cart-check" />
+                </template>
+                <v-list-item-title>
+                  Purchase #{{ purchase.id }} - {{ purchase.listItemArray.length }} items
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ new Date(purchase.createdAt || '').toLocaleDateString() }}
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-btn
+                    icon="mdi-restore"
+                    variant="text"
+                    size="small"
+                    @click.stop="handleRestorePurchase(purchase.id)"
+                  />
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="showPurchasesDialog = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- Dialog for sharing list -->
+      <v-dialog v-model="showShareDialog" max-width="500" persistent>
+        <v-card>
+          <v-card-title class="text-h5">Share List</v-card-title>
+          <v-card-text>
+            <v-alert v-if="shareError" type="error" class="mb-4" density="comfortable">
+              {{ shareError }}
+            </v-alert>
+            <v-text-field
+              v-model="shareEmail"
+              label="Email address"
+              variant="outlined"
+              type="email"
+              placeholder="Enter email to share with"
+              autofocus
+              @keyup.enter="submitShareList"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="showShareDialog = false">Cancel</v-btn>
+            <v-btn
+              color="primary"
+              variant="elevated"
+              :disabled="!shareEmail.trim()"
+              @click="submitShareList"
+            >
+              Share
             </v-btn>
           </v-card-actions>
         </v-card>

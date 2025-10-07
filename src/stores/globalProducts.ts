@@ -35,6 +35,31 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     categories.value = data as any
   }
 
+  async function createCategory(name: string, metadata?: Record<string, unknown>) {
+    const created = await apiFetch<Category>('/api/categories', {
+      method: 'POST',
+      json: { name, metadata: metadata ?? {} },
+    })
+    categories.value.unshift(created)
+    return created
+  }
+
+  async function updateCategory(id: number, updates: { name?: string; metadata?: Record<string, unknown> }) {
+    const updated = await apiFetch<Category>(`/api/categories/${id}`, {
+      method: 'PUT',
+      json: updates,
+    })
+    const index = categories.value.findIndex((c) => c.id === id)
+    if (index !== -1) categories.value[index] = updated
+    return updated
+  }
+
+  async function deleteCategory(id: number) {
+    await apiFetch(`/api/categories/${id}`, { method: 'DELETE' })
+    const index = categories.value.findIndex((c) => c.id === id)
+    if (index !== -1) categories.value.splice(index, 1)
+  }
+
   async function addProduct(name: string, category_id: number, pantry_id?: number | null, metadata?: any) {
     const created = await apiFetch<Product>('/api/products', {
       method: 'POST',
@@ -66,6 +91,9 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     filteredProducts,
     fetchProducts,
     fetchCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
     addProduct,
     deleteProduct,
     updateProduct,

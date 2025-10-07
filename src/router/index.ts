@@ -16,6 +16,11 @@ const router = createRouter({
       component: () => import('@/views/LoginView.vue'),
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+    },
+    {
       path: '/list/:id',
       name: 'list',
       component: () => import('@/views/ListView.vue'),
@@ -30,11 +35,11 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const publicRoutes = new Set(['/login'])
+  const publicRoutes = new Set(['/login', '/register'])
   if (!publicRoutes.has(to.path) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.path === '/login' && auth.isAuthenticated) {
+  if ((to.path === '/login' || to.path === '/register') && auth.isAuthenticated) {
     return { path: '/' }
   }
 })
