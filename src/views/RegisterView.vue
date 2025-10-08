@@ -58,43 +58,37 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="register-view">
-    <v-container class="py-12" style="max-width: 480px">
-      <h1 class="mb-6">Create account</h1>
-      <v-alert v-if="errorMessage" type="error" class="mb-4" density="comfortable">
+  <div class="auth-layout">
+    <v-container class="auth-card">
+      <div class="logo-wrap">
+        <img src="/logo.svg" alt="Listita" class="logo" />
+      </div>
+      <h2 class="title">Create an account</h2>
+
+      <v-alert v-if="errorMessage" type="error" class="block-gap" density="comfortable">
         {{ errorMessage }}
       </v-alert>
-      <v-alert v-if="successMessage" type="success" class="mb-4" density="comfortable">
+      <v-alert v-if="successMessage" type="success" class="block-gap" density="comfortable">
         {{ successMessage }}
       </v-alert>
-      <v-form @submit.prevent="handleSubmit">
-        <v-text-field v-model="name" label="First Name" variant="outlined" class="mb-4" required />
-        <v-text-field v-model="surname" label="Last Name" variant="outlined" class="mb-4" required />
-        <v-text-field v-model="email" label="Email" type="email" variant="outlined" class="mb-4" required />
-        <v-text-field 
-          v-model="password" 
-          label="Password" 
-          type="password" 
-          variant="outlined" 
-          class="mb-4" 
-          hint="Minimum 6 characters"
-          required 
-        />
-        <v-text-field 
-          v-model="confirmPassword" 
-          label="Confirm Password" 
-          type="password" 
-          variant="outlined" 
-          class="mb-4" 
-          required 
-        />
-        <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="mb-4">
+
+      <v-form class="stack" @submit.prevent="handleSubmit">
+        <v-text-field v-model="email" label="" placeholder="email@domain.com" type="email" variant="outlined" density="comfortable" class="tall-input" required />
+        <v-text-field v-model="name" label="" placeholder="Enter your full name" variant="outlined" density="comfortable" class="tall-input" required />
+        <v-text-field v-model="password" label="" placeholder="Create your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
+        <v-text-field v-model="confirmPassword" label="" placeholder="Repeat your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
+
+        <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">
           Create account
         </v-btn>
-        <div class="text-center">
-          <v-btn variant="text" size="small" to="/login">
-            Already have an account? Sign in
-          </v-btn>
+
+        <div class="legal">By clicking continue, you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a></div>
+
+        <div class="links">
+          <div class="links-row">
+            <span class="muted">Already have an account? </span>
+            <RouterLink to="/login" class="link">Sign in</RouterLink>
+          </div>
         </div>
       </v-form>
     </v-container>
@@ -102,9 +96,47 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.register-view {
-  background-color: #fafafa;
-  min-height: calc(100vh - 72px);
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
 }
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.logo {
+  width: 196px;
+  height: 196px;
+}
+
+.title { font-weight: 600; margin-bottom: 24px; }
+
+.stack > * { margin-bottom: 16px; }
+.block-gap { margin-bottom: 16px; }
+.tall-input { --v-input-control-height: 44px; }
+.cta { margin-bottom: 12px; font-size: 16px; }
+
+.links { text-align: center; font-size: 12px; }
+.link { color: #111827; text-decoration: underline; }
+.link-btn { text-transform: none; text-decoration: underline; color: #6b7280; }
+
+.legal { color: #6b7280; font-size: 12px; margin-bottom: 12px; }
+.muted { color: #6b7280; }
+.no-transform { text-transform: none; }
 </style>
 

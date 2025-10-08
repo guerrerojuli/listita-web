@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -47,27 +47,58 @@ async function handleForgotPassword() {
 </script>
 
 <template>
-  <div class="login-view">
-    <v-container class="py-12" style="max-width: 480px">
-      <h1 class="mb-6">Sign in</h1>
-      <v-alert v-if="errorMessage" type="error" class="mb-4" density="comfortable">
+  <div class="auth-layout">
+    <v-container class="auth-card">
+      <div class="logo-wrap">
+        <img src="/logo.svg" alt="Listita" class="logo" />
+      </div>
+      <h2 class="title">Welcome Back</h2>
+      <div class="subtitle">Login to access the platform</div>
+
+      <v-alert v-if="errorMessage" type="error" class="block-gap" density="comfortable">
         {{ errorMessage }}
       </v-alert>
-      <v-alert v-if="successMessage" type="success" class="mb-4" density="comfortable">
+      <v-alert v-if="successMessage" type="success" class="block-gap" density="comfortable">
         {{ successMessage }}
       </v-alert>
-      <v-form @submit.prevent="handleSubmit">
-        <v-text-field v-model="email" label="Email" type="email" variant="outlined" class="mb-4" required />
-        <v-text-field v-model="password" label="Password" type="password" variant="outlined" class="mb-4" required />
-        <div class="d-flex justify-space-between align-center mb-6">
-          <v-btn variant="text" size="small" @click="handleForgotPassword" :disabled="loading">
+
+      <v-form class="stack" @submit.prevent="handleSubmit">
+        <v-text-field
+          v-model="email"
+          label=""
+          placeholder="email@domain.com"
+          type="email"
+          variant="outlined"
+          density="comfortable"
+          class="tall-input"
+          style="--v-input-control-height: 44px"
+          required
+        />
+        <v-text-field
+          v-model="password"
+          label=""
+          placeholder="Enter your password"
+          type="password"
+          variant="outlined"
+          density="comfortable"
+          class="tall-input"
+          style="--v-input-control-height: 44px"
+          required
+        />
+
+        <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">
+          Login
+        </v-btn>
+
+        <div class="links">
+          <div class="links-row">
+            <span class="muted">Don't have an account? </span>
+            <RouterLink to="/register" class="link">Sign up</RouterLink>
+          </div>
+          <button type="button" class="link as-text" @click="handleForgotPassword" :disabled="loading">
             Forgot password?
-          </v-btn>
-          <v-btn variant="text" size="small" to="/register">
-            Create account
-          </v-btn>
+          </button>
         </div>
-        <v-btn color="black" density="comfortable" :loading="loading" type="submit" block>Sign in</v-btn>
       </v-form>
     </v-container>
   </div>
@@ -75,10 +106,59 @@ async function handleForgotPassword() {
 </template>
 
 <style scoped>
-.login-view {
-  background-color: #fafafa;
-  min-height: calc(100vh - 72px);
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
 }
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  width: 196px;
+  height: 196px;
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.title { font-weight: 600; margin-bottom: 4px; }
+
+.subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 24px; }
+
+.stack > * { margin-bottom: 16px; }
+.block-gap { margin-bottom: 16px; }
+.tall-input { --v-input-control-height: 44px; }
+.cta { margin-bottom: 12px; font-size: 16px; }
+
+.links { text-align: center; font-size: 12px; }
+.links .link { color: #111827; text-decoration: underline; }
+
+.links .as-text {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: #6b7280;
+  text-decoration: underline;
+}
+.no-transform { text-transform: none; }
+.muted { color: #6b7280; }
+.links { text-align: center; }
+.links-row { margin-bottom: 8px; }
 </style>
-
-
