@@ -43,13 +43,14 @@ export async function apiFetch<T = unknown>(path: string, options: ApiOptions = 
   })
 
   if (!response.ok) {
-    let errorBody: unknown
+    let errorBody: any
     try {
       errorBody = await response.json()
     } catch {
       // ignore
     }
-    const error = new Error(`API ${method} ${path} failed: ${response.status}`)
+    const errorMessage = errorBody?.message || `API ${method} ${path} failed: ${response.status}`
+    const error = new Error(errorMessage)
     ;(error as any).status = response.status
     ;(error as any).body = errorBody
     throw error

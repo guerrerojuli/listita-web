@@ -10,17 +10,10 @@ import {
     ListItemFilterOptions,
 } from "../types/listItem";
 
-/**
- * Creates a new list item inside a shopping list.
- * Runs inside a transaction to avoid race conditions.
- *
- * @param {RegisterListItemData} itemData - Item data (name, quantity, metadata, listId)
- * @returns {Promise<{ item: ListItem }>} Created item
- * @throws {NotFoundError} If the parent list does not exist
- */
+
 export async function addListItemService(
     itemData: RegisterListItemData
-): Promise<{ item: ListItem }> {
+): Promise<ListItem> {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -57,12 +50,10 @@ export async function addListItemService(
 
         const saved = await ListItem.findOne({
             where: { id: item.id },
-            relations: ["list", "list.owner", "product", "product.pantry", "product.pantry.owner"],
+            relations: ["list", "list.owner", "product", "product.pantry", "product.pantry.owner", "product.category"],
         });
 
-        return {
-            item: saved ? (saved.getFormattedListItem() as unknown as ListItem) : item,
-        };
+        return saved ? (saved.getFormattedListItem() as unknown as ListItem) : (item.getFormattedListItem() as unknown as ListItem);
     } catch (err) {
         if (queryRunner.isTransactionActive) await queryRunner.rollbackTransaction();
         throw err;

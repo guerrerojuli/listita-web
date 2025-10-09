@@ -23,10 +23,12 @@ export const useProductsStore = defineStore('products', () => {
   }
 
   async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
-    const created = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items`, {
+    const response = await apiFetch<any>(`/api/shopping-lists/${listId}/items`, {
       method: 'POST',
-      json: { product_id: productId, quantity, unit },
+      json: { product: { id: productId }, quantity, unit },
     })
+    // Handle both response formats: direct item or { item: ... }
+    const created = response.item || response
     items.value.unshift(Object.assign({}, created, { listId }) as any)
   }
 

@@ -3,12 +3,15 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
+import { useGlobalProductsStore } from '@/stores/globalProducts'
 import ProductItem from '@/components/ProductItem.vue'
+import type { Product } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const listsStore = useListsStore()
 const productsStore = useProductsStore()
+const globalProductsStore = useGlobalProductsStore()
 
 const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
@@ -23,24 +26,61 @@ watch(list, (newList) => {
 const items = computed(() => productsStore.getItemsByListId(listId.value))
 
 const searchQuery = ref('')
-const newProductName = ref('')
+const showSearchResults = ref(false)
+const isSearching = ref(false)
 
-const filteredProducts = computed(() => {
-  if (!searchQuery.value) return items.value
-  return items.value.filter((i) =>
-    i.product.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+// Filter list items based on search query
+const filteredListItems = computed(() => {
+  if (!searchQuery.value) return items.value || []
+  return (items.value || []).filter((i) =>
+    i.product?.name?.toLowerCase().includes(searchQuery.value.toLowerCase()),
   )
 })
 
-async function handleAddProduct() {
-  // For simplicity, there's no API to create product by name directly.
-  // In a full UI you'd search products first; here we no-op.
-  alert('Use Products to create a product first, then add items via product selector (not implemented).')
+// Get available products to add (excluding ones already in list)
+const availableProducts = computed(() => {
+  if (!searchQuery.value) return []
+  const itemProductIds = new Set((items.value || []).map(i => i.product?.id).filter(Boolean))
+  return (globalProductsStore.products || []).filter((p) => {
+    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const notInList = !itemProductIds.has(p.id)
+    return matchesSearch && notInList
+  })
+})
+
+async function handleSearchInput(value: string) {
+  searchQuery.value = value
+  
+  if (value.trim().length > 0) {
+    showSearchResults.value = true
+    isSearching.value = true
+    try {
+      await globalProductsStore.fetchProducts({ name: value.trim() })
+    } catch (err) {
+      console.error('Failed to search products:', err)
+    } finally {
+      isSearching.value = false
+    }
+  } else {
+    showSearchResults.value = false
+  }
 }
 
-function handleSearchOrAdd(value: string) {
-  searchQuery.value = value
-  newProductName.value = value
+async function handleAddProduct(product: Product) {
+  try {
+    await productsStore.addItem(listId.value, product.id, 1, 'unit')
+    searchQuery.value = ''
+    showSearchResults.value = false
+  } catch (err: any) {
+    console.error('Failed to add product:', err)
+    const errorMessage = err.message || 'Failed to add product to list'
+    alert(`Failed to add product: ${errorMessage}`)
+  }
+}
+
+function handleCloseSearch() {
+  showSearchResults.value = false
+  searchQuery.value = ''
 }
 
 function handleToggleComplete(itemId: number) {
@@ -111,8 +151,20 @@ if (!list.value) {
   router.push('/')
 }
 
-onMounted(() => {
-  if (list.value) productsStore.loadListItems(listId.value).catch(() => {})
+onMounted(async () => {
+  if (list.value) {
+    try {
+      await productsStore.loadListItems(listId.value)
+    } catch (err) {
+      console.error('Failed to load list items:', err)
+    }
+    // Pre-load products for search
+    try {
+      await globalProductsStore.fetchProducts()
+    } catch (err) {
+      console.error('Failed to load products:', err)
+    }
+  }
 })
 </script>
 
@@ -157,9 +209,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
+      <div
+        v-click-outside="() => { showSearchResults = false }"
+        class="mb-10 search-container"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <v-text-field
-          :model-value="searchQuery"
+          v-model="searchQuery"
           placeholder="Search or add a product..."
           variant="outlined"
           density="comfortable"
@@ -167,16 +223,66 @@ onMounted(() => {
           rounded="lg"
           hide-details
           class="search-field"
-          @update:model-value="handleSearchOrAdd"
-          @keyup.enter="handleAddProduct"
-        />
+          @update:model-value="handleSearchInput"
+          @focus="searchQuery && (showSearchResults = true)"
+        >
+          <template v-slot:append-inner>
+            <v-btn
+              v-if="searchQuery"
+              icon="mdi-close"
+              variant="text"
+              size="small"
+              @click="handleCloseSearch"
+            />
+          </template>
+        </v-text-field>
+
+        <!-- Search results dropdown -->
+        <v-card
+          v-if="showSearchResults && searchQuery"
+          class="search-results mt-2"
+          elevation="8"
+        >
+          <v-list v-if="availableProducts && availableProducts.length > 0" density="compact">
+            <v-list-subheader>Products you can add</v-list-subheader>
+            <v-list-item
+              v-for="product in availableProducts"
+              :key="product.id"
+              @click="handleAddProduct(product)"
+              class="search-result-item"
+            >
+              <template v-slot:prepend>
+                <v-icon icon="mdi-plus-circle-outline" color="success" />
+              </template>
+              <v-list-item-title>{{ product.name }}</v-list-item-title>
+              <v-list-item-subtitle>{{ product.category?.name ?? 'Sin categoría' }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+          
+          <div v-else-if="isSearching" class="pa-4 text-center">
+            <v-progress-circular indeterminate size="24" />
+            <p class="text-caption mt-2">Searching...</p>
+          </div>
+          
+          <div v-else class="pa-4 text-center">
+            <p class="text-body-2 text-medium-emphasis mb-3">No products found for "{{ searchQuery }}"</p>
+            <v-btn
+              color="primary"
+              variant="text"
+              size="small"
+              @click="router.push('/products')"
+            >
+              Create new product
+            </v-btn>
+          </div>
+        </v-card>
       </div>
 
-      <div v-if="filteredProducts.length > 0" class="mb-10">
+      <div v-if="filteredListItems && filteredListItems.length > 0" class="mb-10">
         <h2 class="section-title mb-6">Shopping List</h2>
         <div class="products-grid">
           <ProductItem
-            v-for="item in filteredProducts"
+            v-for="item in filteredListItems"
             :key="item.id"
             :item="item"
             @toggle-complete="handleToggleComplete(item.id)"
@@ -188,14 +294,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-else-if="searchQuery" class="empty-state">
-        <p class="text-body-1 text-medium-emphasis mb-4">"{{ searchQuery }}" not found</p>
-        <v-btn color="black" elevation="0" @click="handleAddProduct">
-          Add "{{ searchQuery }}" to the list
-        </v-btn>
-      </div>
-
-      <div v-else class="empty-state">
+      <div v-else-if="!searchQuery || (filteredListItems && filteredListItems.length === 0)" class="empty-state">
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-cart-outline</v-icon>
         <p class="text-h6 text-medium-emphasis">No products in this list</p>
         <p class="text-body-2 text-medium-emphasis">Use the search bar above to add products</p>
@@ -222,6 +321,10 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
+.search-container {
+  position: relative;
+}
+
 .search-field {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -232,6 +335,26 @@ onMounted(() => {
 
 .search-field :deep(.v-field__input) {
   padding: 1rem 1.25rem;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 12px;
+}
+
+.search-result-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-result-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .section-title {
