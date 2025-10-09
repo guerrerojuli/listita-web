@@ -64,7 +64,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   async function addProduct(name: string, category_id: number, pantry_id?: number | null, metadata?: any) {
     const created = await apiFetch<Product>('/api/products', {
       method: 'POST',
-      json: { name, category_id, pantry_id: pantry_id ?? null, metadata: metadata ?? {} },
+      json: { name, category: { id: category_id }, pantry_id: pantry_id ?? null, metadata: metadata ?? {} },
     })
     products.value.unshift(created)
   }
@@ -76,7 +76,12 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   }
 
   async function updateProduct(id: number, updates: { name?: string; category_id?: number; pantry_id?: number | null; metadata?: any }) {
-    const updated = await apiFetch<Product>(`/api/products/${id}`, { method: 'PUT', json: updates })
+    const payload: any = { ...updates }
+    if (updates.category_id !== undefined) {
+      payload.category = { id: updates.category_id }
+      delete payload.category_id
+    }
+    const updated = await apiFetch<Product>(`/api/products/${id}`, { method: 'PUT', json: payload })
     const index = products.value.findIndex((p) => p.id === id)
     if (index !== -1) products.value[index] = updated
   }
