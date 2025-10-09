@@ -50,6 +50,32 @@ export function isValidProductData(body: any): { isValid: boolean; message?: str
     return { isValid: true };
 }
 
+export function isValidProductUpdateData(body: any): { isValid: boolean; message?: string } {
+    if (!body) {
+        return { isValid: false, message: ERROR_MESSAGES.VALIDATION.REQUIRED("body") };
+    }
+    if (body.name !== undefined) {
+        if (typeof body.name !== "string") {
+            return { isValid: false, message: ERROR_MESSAGES.VALIDATION.INVALID("name") };
+        }
+    }
+    if (body.category !== undefined) {
+        if (body.category !== null) {
+            if (typeof body.category !== "object" || !body.category.id) {
+                return { isValid: false, message: ERROR_MESSAGES.VALIDATION.INVALID("category") };
+            }
+            if (typeof body.category.id !== "number") {
+                return { isValid: false, message: ERROR_MESSAGES.VALIDATION.INVALID_ID_WITH_TYPE("Category") };
+            }
+        }
+    }
+    if (body.metadata !== undefined && typeof body.metadata !== "object") {
+        return { isValid: false, message: ERROR_MESSAGES.VALIDATION.INVALID("metadata") };
+    }
+
+    return { isValid: true };
+}
+
 export function isValidProductId(params: any): { isValid: boolean; message?: string } {
     if (!params.id || params.id === '') {
         return { isValid: false, message: ERROR_MESSAGES.VALIDATION.MISSING_FIELD("ID") };

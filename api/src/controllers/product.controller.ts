@@ -3,7 +3,7 @@ import { replyCreated, replySuccess, replyWithError } from '../http';
 import * as ProductService from '../services/product.service';
 import {BadRequestError, ServerError} from '../types/errors';
 import { User } from "../entities/user";
-import {isValidProductData, isValidProductId, RegisterProductData} from "../types/product";
+import {isValidProductData, isValidProductUpdateData, isValidProductId, RegisterProductData} from "../types/product";
 import { ERROR_MESSAGES } from '../types/errorMessages';
 
 export async function getProducts(req: Request, res: Response): Promise<void> {
@@ -81,7 +81,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
     }
     const id = Number(req.params.id);
     
-    const bodyValidation = isValidProductData(req.body);
+    const bodyValidation = isValidProductUpdateData(req.body);
     if (!bodyValidation.isValid) {
       throw new BadRequestError(bodyValidation.message);
     }
@@ -92,7 +92,7 @@ export async function updateProduct(req: Request, res: Response): Promise<void> 
       category,
       metadata
     });
-    replySuccess(res, { product });
+    replySuccess(res, product);
   } catch (err) {
     replyWithError(res, err);
   }
