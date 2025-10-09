@@ -22,7 +22,7 @@ const emit = defineEmits<Emits>()
     </div>
 
     <div class="product-categories">
-      <v-chip size="small" class="category-chip">{{ product.category.name }}</v-chip>
+      <v-chip size="small" class="category-chip">{{ product.category?.name ?? 'Sin categoría' }}</v-chip>
     </div>
 
     <div class="product-actions">

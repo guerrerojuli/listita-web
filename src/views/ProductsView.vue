@@ -78,9 +78,15 @@ function handleDeleteProduct(productId: string) {
   }
 }
 
-// load initial data
-productsStore.fetchCategories().catch(() => {})
-productsStore.fetchProducts().catch(() => {})
+// load initial data in sequence: categories first, then products to enrich with category
+;(async () => {
+  try {
+    await productsStore.fetchCategories()
+  } catch {}
+  try {
+    await productsStore.fetchProducts()
+  } catch {}
+})()
 </script>
 
 <template>

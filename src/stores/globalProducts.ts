@@ -14,10 +14,11 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   const filteredProducts = computed(() => {
     if (!searchQuery.value) return products.value
     const searchLower = searchQuery.value.toLowerCase()
-    return products.value.filter((product) =>
-      product.name.toLowerCase().includes(searchLower) ||
-      product.category.name.toLowerCase().includes(searchLower),
-    )
+    return products.value.filter((product) => {
+      const productName = (product.name ?? '').toLowerCase()
+      const categoryName = (product.category?.name ?? '').toLowerCase()
+      return productName.includes(searchLower) || categoryName.includes(searchLower)
+    })
   })
 
   // Actions
