@@ -56,7 +56,7 @@ function handleEditProduct(productId: string) {
   if (product) {
     editingProduct.value = product
     editProductName.value = product.name
-    editProductCategoryId.value = product.category.id
+    editProductCategoryId.value = product.category?.id ?? null
     editDialog.value = true
   }
 }

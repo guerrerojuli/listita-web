@@ -9,34 +9,37 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
+      meta: { title: 'Lists' },
     },
     {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
-      meta: { hideNavBar: true },
+      meta: { hideNavBar: true, title: 'Login' },
     },
     {
       path: '/register',
       name: 'register',
       component: () => import('@/views/RegisterView.vue'),
-      meta: { hideNavBar: true },
+      meta: { hideNavBar: true, title: 'Register' },
     },
     {
       path: '/verify',
       name: 'verify',
       component: () => import('@/views/VerifyAccountView.vue'),
-      meta: { hideNavBar: true },
+      meta: { hideNavBar: true, title: 'Verify Account' },
     },
     {
       path: '/list/:id',
       name: 'list',
       component: () => import('@/views/ListView.vue'),
+      meta: { title: 'List' },
     },
     {
       path: '/products',
       name: 'products',
       component: () => import('@/views/ProductsView.vue'),
+      meta: { title: 'Products' },
     },
   ],
 })
@@ -50,6 +53,13 @@ router.beforeEach((to) => {
   if (publicRoutes.has(to.path) && auth.isAuthenticated) {
     return { path: '/' }
   }
+})
+
+// Update document title after each navigation
+router.afterEach((to) => {
+  const baseTitle = 'Listita'
+  const pageTitle = to.meta.title as string | undefined
+  document.title = pageTitle ? `${baseTitle} - ${pageTitle}` : baseTitle
 })
 
 export default router

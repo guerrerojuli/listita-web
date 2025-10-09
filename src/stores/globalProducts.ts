@@ -76,14 +76,22 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   }
 
   async function updateProduct(id: number, updates: { name?: string; category_id?: number; pantry_id?: number | null; metadata?: any }) {
-    const payload: any = { ...updates }
+    const payload: any = {}
+    if (updates.name !== undefined) {
+      payload.name = updates.name
+    }
     if (updates.category_id !== undefined) {
       payload.category = { id: updates.category_id }
-      delete payload.category_id
     }
-    const updated = await apiFetch<Product>(`/api/products/${id}`, { method: 'PUT', json: payload })
+    if (updates.metadata !== undefined) {
+      payload.metadata = updates.metadata
+    }
+    const response = await apiFetch<any>(`/api/products/${id}`, { method: 'PUT', json: payload })    
+    const updated: Product = response.product || response    
     const index = products.value.findIndex((p) => p.id === id)
-    if (index !== -1) products.value[index] = updated
+    if (index !== -1) {
+      products.value.splice(index, 1, updated)
+    }
   }
 
   function updateSearch(query: string) {

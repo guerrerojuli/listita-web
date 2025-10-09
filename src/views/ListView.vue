@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
@@ -12,6 +12,13 @@ const productsStore = useProductsStore()
 
 const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
+
+// Update document title when list changes
+watch(list, (newList) => {
+  if (newList) {
+    document.title = `Listita - ${newList.name}`
+  }
+}, { immediate: true })
 
 const items = computed(() => productsStore.getItemsByListId(listId.value))
 
