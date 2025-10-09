@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { hideNavBar: true },
     },
     {
+      path: '/verify',
+      name: 'verify',
+      component: () => import('@/views/VerifyAccountView.vue'),
+      meta: { hideNavBar: true },
+    },
+    {
       path: '/list/:id',
       name: 'list',
       component: () => import('@/views/ListView.vue'),
@@ -37,11 +43,11 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const publicRoutes = new Set(['/login', '/register'])
+  const publicRoutes = new Set(['/login', '/register', '/verify'])
   if (!publicRoutes.has(to.path) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if ((to.path === '/login' || to.path === '/register') && auth.isAuthenticated) {
+  if (publicRoutes.has(to.path) && auth.isAuthenticated) {
     return { path: '/' }
   }
 })

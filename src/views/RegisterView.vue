@@ -45,10 +45,8 @@ async function handleSubmit() {
     email.value = ''
     password.value = ''
     confirmPassword.value = ''
-    // Redirect to login after 3 seconds
-    setTimeout(() => {
-      router.push('/login')
-    }, 3000)
+    // Go to verify page so user can enter the code
+    router.push({ name: 'verify', query: { email: email.value.trim() } })
   } catch (err: any) {
     errorMessage.value = err?.body?.message || 'Registration failed. Email may already be in use.'
   } finally {
@@ -58,42 +56,34 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="auth-layout">
-    <v-container class="auth-card">
-      <div class="logo-wrap">
-        <img src="/logo.svg" alt="Listita" class="logo" />
-      </div>
-      <h2 class="title">Create an account</h2>
+  <AuthScaffold title="Create an account" :error="errorMessage" :success="successMessage">
+    <v-form class="stack" @submit.prevent="handleSubmit">
+      <v-text-field v-model="email" label="" placeholder="email@domain.com" type="email" variant="outlined" density="comfortable" class="tall-input" required />
+      <v-text-field v-model="name" label="" placeholder="Enter your name" variant="outlined" density="comfortable" class="tall-input" required />
+      <v-text-field v-model="surname" label="" placeholder="Enter your surname" variant="outlined" density="comfortable" class="tall-input" required />
+      <v-text-field v-model="password" label="" placeholder="Create your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
+      <v-text-field v-model="confirmPassword" label="" placeholder="Repeat your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
 
-      <v-alert v-if="errorMessage" type="error" class="block-gap" density="comfortable">
-        {{ errorMessage }}
-      </v-alert>
-      <v-alert v-if="successMessage" type="success" class="block-gap" density="comfortable">
-        {{ successMessage }}
-      </v-alert>
+      <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">
+        Create account
+      </v-btn>
 
-      <v-form class="stack" @submit.prevent="handleSubmit">
-        <v-text-field v-model="email" label="" placeholder="email@domain.com" type="email" variant="outlined" density="comfortable" class="tall-input" required />
-        <v-text-field v-model="name" label="" placeholder="Enter your full name" variant="outlined" density="comfortable" class="tall-input" required />
-        <v-text-field v-model="password" label="" placeholder="Create your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
-        <v-text-field v-model="confirmPassword" label="" placeholder="Repeat your password" type="password" variant="outlined" density="comfortable" class="tall-input" required />
+      <div class="legal">By clicking continue, you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a></div>
 
-        <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">
-          Create account
-        </v-btn>
-
-        <div class="legal">By clicking continue, you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a></div>
-
-        <div class="links">
-          <div class="links-row">
-            <span class="muted">Already have an account? </span>
-            <RouterLink to="/login" class="link">Sign in</RouterLink>
-          </div>
+      <div class="links">
+        <div class="links-row">
+          <span class="muted">Already have an account? </span>
+          <RouterLink to="/login" class="link">Sign in</RouterLink>
         </div>
-      </v-form>
-    </v-container>
-  </div>
+      </div>
+    </v-form>
+  </AuthScaffold>
 </template>
+
+<script lang="ts">
+import AuthScaffold from '@/components/AuthScaffold.vue'
+export default { components: { AuthScaffold } }
+</script>
 
 <style scoped>
 .auth-layout {
