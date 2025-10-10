@@ -8,10 +8,12 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const code = ref<string>((route.query.code as string) || '')
-const email = ref<string>((route.query.email as string) || '')
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+
+// Get the email from localStorage (saved during registration)
+const savedEmail = localStorage.getItem('pending_verification_email') || ''
 
 async function handleVerify() {
   errorMessage.value = ''
@@ -23,6 +25,8 @@ async function handleVerify() {
   loading.value = true
   try {
     await auth.verifyAccount(code.value.trim())
+    // Clear the stored email since verification is complete
+    localStorage.removeItem('pending_verification_email')
     successMessage.value = 'Cuenta verificada con éxito. Ya puedes iniciar sesión.'
     setTimeout(() => router.push({ name: 'login' }), 1500)
   } catch (err: any) {
@@ -35,13 +39,13 @@ async function handleVerify() {
 async function resendCode() {
   errorMessage.value = ''
   successMessage.value = ''
-  if (!email.value) {
-    errorMessage.value = 'Ingresa tu email para reenviar el código'
+  if (!savedEmail) {
+    errorMessage.value = 'No se encontró el email. Por favor regístrate nuevamente.'
     return
   }
   loading.value = true
   try {
-    await auth.sendVerification(email.value)
+    await auth.sendVerification(savedEmail)
     successMessage.value = 'Te enviamos un nuevo código a tu email.'
   } catch (err: any) {
     errorMessage.value = err?.body?.message || 'No se pudo enviar el código. Intenta más tarde.'
@@ -54,7 +58,6 @@ async function resendCode() {
 <template>
   <AuthScaffold title="Verificar cuenta" :error="errorMessage" :success="successMessage">
     <v-form class="stack" @submit.prevent="handleVerify">
-      <v-text-field v-model="email" label="" placeholder="email@domain.com" type="email" variant="outlined" density="comfortable" class="tall-input" />
       <v-text-field v-model="code" label="" placeholder="Código de verificación" variant="outlined" density="comfortable" class="tall-input" required />
 
       <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">

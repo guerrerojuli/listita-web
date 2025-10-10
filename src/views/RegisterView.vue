@@ -31,22 +31,25 @@ async function handleSubmit() {
   
   loading.value = true
   try {
+    const userEmail = email.value.trim()
     await auth.register({
       name: name.value.trim(),
       surname: surname.value.trim(),
-      email: email.value.trim(),
+      email: userEmail,
       password: password.value,
       metadata: {},
     })
+    // Save email so we can resend the verification code if needed
+    localStorage.setItem('pending_verification_email', userEmail)
     successMessage.value = 'Registration successful! A verification email has been sent. Please check your inbox.'
-    // Clear form
+    // Clear form fields
     name.value = ''
     surname.value = ''
     email.value = ''
     password.value = ''
     confirmPassword.value = ''
-    // Go to verify page so user can enter the code
-    router.push({ name: 'verify', query: { email: email.value.trim() } })
+    // Redirect to verification page
+    router.push({ name: 'verify' })
   } catch (err: any) {
     errorMessage.value = err?.body?.message || 'Registration failed. Email may already be in use.'
   } finally {
@@ -67,8 +70,6 @@ async function handleSubmit() {
       <v-btn color="black" density="comfortable" :loading="loading" type="submit" block class="cta no-transform" :height="44">
         Create account
       </v-btn>
-
-      <div class="legal">By clicking continue, you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a></div>
 
       <div class="links">
         <div class="links-row">
@@ -125,7 +126,6 @@ export default { components: { AuthScaffold } }
 .link { color: #111827; text-decoration: underline; }
 .link-btn { text-transform: none; text-decoration: underline; color: #6b7280; }
 
-.legal { color: #6b7280; font-size: 12px; margin-bottom: 12px; }
 .muted { color: #6b7280; }
 .no-transform { text-transform: none; }
 </style>

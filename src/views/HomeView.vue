@@ -120,7 +120,7 @@ onMounted(() => {
       </div>
 
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
-        <SearchBar v-model="searchQuery" placeholder="Search categories or products" />
+        <SearchBar v-model="searchQuery" placeholder="Search for existing lists" />
       </div>
 
       <div v-if="recurrentLists.length > 0" class="mb-10">
