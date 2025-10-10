@@ -30,6 +30,18 @@ const router = createRouter({
       meta: { hideNavBar: true, title: 'Verify Account' },
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/views/ForgotPasswordView.vue'),
+      meta: { hideNavBar: true, title: 'Forgot Password' },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+      meta: { hideNavBar: true, title: 'Reset Password' },
+    },
+    {
       path: '/list/:id',
       name: 'list',
       component: () => import('@/views/ListView.vue'),
@@ -46,7 +58,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const publicRoutes = new Set(['/login', '/register', '/verify'])
+  const publicRoutes = new Set(['/login', '/register', '/verify', '/forgot-password', '/reset-password'])
   if (!publicRoutes.has(to.path) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

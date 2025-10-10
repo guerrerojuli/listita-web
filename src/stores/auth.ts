@@ -115,6 +115,13 @@ export const useAuthStore = defineStore('auth', () => {
     return verified
   }
 
+  async function resetPassword(code: string, password: string) {
+    await apiFetch('/api/users/reset-password', {
+      method: 'POST',
+      json: { code, password },
+    })
+  }
+
   return {
     token,
     user,
@@ -128,6 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
     forgotPassword,
     sendVerification,
     verifyAccount,
+    resetPassword,
   }
 })
 

@@ -10,7 +10,6 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
-const successMessage = ref('')
 
 async function handleSubmit() {
   errorMessage.value = ''
@@ -20,26 +19,6 @@ async function handleSubmit() {
     router.replace('/')
   } catch (err: any) {
     errorMessage.value = 'Invalid credentials or server error'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleForgotPassword() {
-  if (!email.value.trim()) {
-    errorMessage.value = 'Please enter your email address'
-    return
-  }
-  
-  errorMessage.value = ''
-  successMessage.value = ''
-  loading.value = true
-  
-  try {
-    await auth.forgotPassword(email.value.trim())
-    successMessage.value = 'Password reset instructions sent to your email'
-  } catch (err: any) {
-    errorMessage.value = 'Failed to send reset email. Please check your email address.'
   } finally {
     loading.value = false
   }
@@ -57,9 +36,6 @@ async function handleForgotPassword() {
 
       <v-alert v-if="errorMessage" type="error" class="block-gap" density="comfortable">
         {{ errorMessage }}
-      </v-alert>
-      <v-alert v-if="successMessage" type="success" class="block-gap" density="comfortable">
-        {{ successMessage }}
       </v-alert>
 
       <v-form class="stack" @submit.prevent="handleSubmit">
@@ -95,9 +71,9 @@ async function handleForgotPassword() {
             <span class="muted">Don't have an account? </span>
             <RouterLink to="/register" class="link">Sign up</RouterLink>
           </div>
-          <button type="button" class="link as-text" @click="handleForgotPassword" :disabled="loading">
+          <RouterLink to="/forgot-password" class="link as-text">
             Forgot password?
-          </button>
+          </RouterLink>
         </div>
       </v-form>
     </v-container>
