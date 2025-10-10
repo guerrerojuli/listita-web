@@ -43,7 +43,8 @@ export async function addListItemService(
         item.unit = itemData.unit;
         item.metadata = itemData.metadata ?? null;
         item.purchased = false;
-        item.list = list.getFormattedList();
+        // Assign the actual List entity to the relation instead of a formatted object
+        item.list = list;
 
         await queryRunner.manager.save(item);
         await queryRunner.commitTransaction();

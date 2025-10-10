@@ -58,12 +58,12 @@ export const useProductsStore = defineStore('products', () => {
 
   function incrementQuantity(listId: number, itemId: number) {
     const item = items.value.find((i) => i.id === itemId)
-    if (item) updateQuantity(listId, itemId, item.quantity + 1, item.unit)
+    if (item && !item.purchased) updateQuantity(listId, itemId, item.quantity + 1, item.unit)
   }
 
   function decrementQuantity(listId: number, itemId: number) {
     const item = items.value.find((i) => i.id === itemId)
-    if (item && item.quantity > 1) updateQuantity(listId, itemId, item.quantity - 1, item.unit)
+    if (item && !item.purchased && item.quantity > 1) updateQuantity(listId, itemId, item.quantity - 1, item.unit)
   }
 
   return {

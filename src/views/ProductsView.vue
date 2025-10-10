@@ -11,10 +11,28 @@ const dialog = ref(false)
 const editDialog = ref(false)
 const newProductName = ref('')
 const newProductCategoryId = ref<number | null>(null)
+const newProductUnit = ref<string | null>(null)
+const newProductUnitValue = ref<number | null>(null)
 
 const editingProduct = ref<any>(null)
 const editProductName = ref('')
 const editProductCategoryId = ref<number | null>(null)
+const editProductUnit = ref<string | null>(null)
+const editProductUnitValue = ref<number | null>(null)
+const unitOptions = [
+  { title: 'Sin medida', value: 'none' },
+  { title: 'Unidad', value: 'unit' },
+  { title: 'Litros', value: 'liters' },
+  { title: 'Mililitros', value: 'milliliters' },
+  { title: 'Kilos', value: 'kilograms' },
+  { title: 'Gramos', value: 'grams' },
+  { title: 'Volumen', value: 'volume' },
+  { title: 'Pack', value: 'pack' },
+  { title: 'Libras', value: 'pounds' },
+  { title: 'Onzas', value: 'ounces' },
+  { title: 'Centímetros', value: 'centimeters' },
+  { title: 'Metros', value: 'meters' },
+]
 
 const categoryDialog = ref(false)
 const newCategoryName = ref('')
@@ -44,9 +62,14 @@ async function createNewCategory() {
 
 async function createNewProduct() {
   if (newProductName.value.trim() && newProductCategoryId.value) {
-    await productsStore.addProduct(newProductName.value.trim(), newProductCategoryId.value)
+    const metadata: any = {}
+    if (newProductUnit.value && newProductUnit.value !== 'none') metadata.unit = newProductUnit.value
+    if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value)) metadata.unitValue = newProductUnitValue.value
+    await productsStore.addProduct(newProductName.value.trim(), newProductCategoryId.value, undefined, metadata)
     newProductName.value = ''
     newProductCategoryId.value = null
+    newProductUnit.value = null
+    newProductUnitValue.value = null
     dialog.value = false
   }
 }
@@ -57,15 +80,23 @@ function handleEditProduct(productId: string) {
     editingProduct.value = product
     editProductName.value = product.name
     editProductCategoryId.value = product.category?.id ?? null
+    editProductUnit.value = (product.metadata as any)?.unit ?? null
+    editProductUnitValue.value = (product.metadata as any)?.unitValue ?? null
     editDialog.value = true
   }
 }
 
 async function updateProduct() {
   if (editingProduct.value && editProductName.value.trim() && editProductCategoryId.value) {
+    const metadata: any = { ...(editingProduct.value.metadata || {}) }
+    if (editProductUnit.value && editProductUnit.value !== 'none') metadata.unit = editProductUnit.value
+    else delete metadata.unit
+    if (editProductUnitValue.value !== null && !Number.isNaN(editProductUnitValue.value)) metadata.unitValue = editProductUnitValue.value
+    else delete metadata.unitValue
     await productsStore.updateProduct(editingProduct.value.id, {
       name: editProductName.value.trim(),
       category_id: editProductCategoryId.value,
+      metadata,
     })
     editDialog.value = false
     editingProduct.value = null
@@ -94,7 +125,7 @@ function handleDeleteProduct(productId: string) {
     <v-container class="py-8">
       <div class="d-flex align-center justify-space-between mb-8">
         <h1 class="page-title">Products</h1>
-        <div class="d-flex gap-3">
+        <div class="d-flex buttons-row">
           <v-btn class="add-product-btn" elevation="0" @click="handleAddCategory">
             Add Category
           </v-btn>
@@ -151,7 +182,6 @@ function handleDeleteProduct(productId: string) {
                 placeholder="Enter product name"
               />
             </div>
-
             <div class="form-field">
               <label class="field-label">Category</label>
               <v-select
@@ -164,6 +194,34 @@ function handleDeleteProduct(productId: string) {
                 hide-details
                 placeholder="Select a category"
               />
+            </div>
+            <div class="form-row">
+              <div class="form-field flex-1">
+                <label class="field-label">Unit</label>
+                <v-select
+                  v-model="newProductUnit"
+                  :items="unitOptions"
+                  item-title="title"
+                  item-value="value"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  placeholder="Select a unit"
+                />
+              </div>
+              <div class="form-field flex-1">
+                <label class="field-label">Medida</label>
+                <v-text-field
+                  v-model.number="newProductUnitValue"
+                  type="number"
+                  min="0"
+                  step="any"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  placeholder="Ej: 2"
+                />
+              </div>
             </div>
           </v-card-text>
 
@@ -213,6 +271,47 @@ function handleDeleteProduct(productId: string) {
                 hide-details
                 placeholder="Select a category"
               />
+            </div>
+            <div class="form-field">
+              <label class="field-label">Medida</label>
+              <v-text-field
+                v-model.number="editProductUnitValue"
+                type="number"
+                min="0"
+                step="any"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                placeholder="Ej: 2"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-field flex-1">
+                <label class="field-label">Unit</label>
+                <v-select
+                  v-model="editProductUnit"
+                  :items="unitOptions"
+                  item-title="title"
+                  item-value="value"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  placeholder="Select a unit"
+                />
+              </div>
+              <div class="form-field flex-1">
+                <label class="field-label">Medida</label>
+                <v-text-field
+                  v-model.number="editProductUnitValue"
+                  type="number"
+                  min="0"
+                  step="any"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  placeholder="Ej: 2"
+                />
+              </div>
             </div>
           </v-card-text>
 
@@ -361,6 +460,15 @@ function handleDeleteProduct(productId: string) {
   margin-bottom: 0;
 }
 
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
 .field-label {
   display: block;
   font-size: 0.875rem;
@@ -404,5 +512,9 @@ function handleDeleteProduct(productId: string) {
   font-weight: 500;
   border-radius: 6px;
   padding: 0.5rem 1.5rem !important;
+}
+
+.buttons-row {
+  gap: 12px; /* ensure spacing between header buttons */
 }
 </style>

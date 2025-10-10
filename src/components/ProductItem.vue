@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { toUnitAbbreviation, formatProductName } from '@/utils/units'
+import ProductMetaChips from '@/components/ProductMetaChips.vue'
 import type { ListItem } from '@/types/api'
 
 interface Props {
@@ -18,6 +20,15 @@ defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const showMenu = ref(false)
+
+function shortUnit(unit?: string) {
+  return unit ? (toUnitAbbreviation(unit) ?? unit) : ''
+}
+
+function displayQuantity(q?: number) {
+  if (typeof q !== 'number' || Number.isNaN(q)) return 0
+  return Math.trunc(q)
+}
 </script>
 
 <template>
@@ -32,7 +43,13 @@ const showMenu = ref(false)
     </div>
 
     <div class="product-info">
-      <span class="product-name">{{ item.product.name }}</span>
+      <span class="product-name">
+        {{ item.product ? item.product.name : 'Producto' }}
+      </span>
+    </div>
+
+    <div class="product-tags" v-if="item.product">
+      <ProductMetaChips :product="item.product" />
     </div>
 
     <div class="product-actions">
@@ -40,11 +57,17 @@ const showMenu = ref(false)
         icon="mdi-minus"
         variant="text"
         size="small"
-        :disabled="item.quantity <= 1"
-        @click="emit('decrement')"
+        :disabled="item.purchased || item.quantity <= 1"
+        @click="!item.purchased && emit('decrement')"
       />
-      <span class="product-quantity">{{ item.quantity }}</span>
-      <v-btn icon="mdi-plus" variant="text" size="small" @click="emit('increment')" />
+      <span class="product-quantity">{{ displayQuantity(item.quantity) }}</span>
+      <v-btn
+        icon="mdi-plus"
+        variant="text"
+        size="small"
+        :disabled="item.purchased"
+        @click="!item.purchased && emit('increment')"
+      />
 
       <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">
         <template v-slot:activator="{ props: menuProps }">
@@ -93,6 +116,7 @@ const showMenu = ref(false)
   border-radius: 12px;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
 }
 
 .product-item:hover {
@@ -121,6 +145,16 @@ const showMenu = ref(false)
   font-size: 1rem;
   font-weight: 500;
   color: #212121;
+}
+
+.product-tags {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.5rem;
+  pointer-events: none; /* non-interactive display */
 }
 
 .product-completed .product-name {

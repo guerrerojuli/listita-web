@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { toUnitAbbreviation } from '@/utils/units'
+import ProductMetaChips from '@/components/ProductMetaChips.vue'
 import type { Product } from '@/types/api'
 
 interface Props {
@@ -10,8 +13,14 @@ interface Emits {
   (e: 'delete'): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const unitLabel = computed(() => {
+  const value = (props.product.metadata as any)?.unit as string | undefined
+  if (!value) return null
+  return toUnitAbbreviation(value)
+})
 </script>
 
 <template>
@@ -21,9 +30,7 @@ const emit = defineEmits<Emits>()
       <!-- Price not provided by API spec; keep name/category -->
     </div>
 
-    <div class="product-categories">
-      <v-chip size="small" class="category-chip">{{ product.category?.name ?? 'Sin categoría' }}</v-chip>
-    </div>
+    <ProductMetaChips :product="product" />
 
     <div class="product-actions">
       <v-btn icon="mdi-pencil-outline" variant="text" size="small" @click.stop="emit('edit')" />

@@ -69,7 +69,8 @@ async function handleSearchInput(value: string) {
 
 async function handleAddProduct(product: Product) {
   try {
-    await productsStore.addItem(listId.value, product.id, 1, 'unit')
+    const defaultUnit = (product.metadata as any)?.unit || 'unit'
+    await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
     searchQuery.value = ''
     showSearchResults.value = false
   } catch (err: any) {
