@@ -28,6 +28,7 @@ const items = computed(() => productsStore.getItemsByListId(listId.value))
 const searchQuery = ref('')
 const showSearchResults = ref(false)
 const isSearching = ref(false)
+const isLoading = ref(false)
 
 // Filter list items based on search query
 const filteredListItems = computed(() => {
@@ -147,29 +148,52 @@ function handleShareList() {
   }
 }
 
-if (!list.value) {
-  router.push('/')
-}
-
 onMounted(async () => {
-  if (list.value) {
+  isLoading.value = true
+  
+  // If list is not in store, try to fetch it from API
+  if (!list.value) {
     try {
-      await productsStore.loadListItems(listId.value)
+      const fetchedList = await listsStore.getListById(listId.value)
+      // Add to store if not already there
+      if (fetchedList && !listsStore.lists.find((l) => l.id === fetchedList.id)) {
+        listsStore.lists.push(fetchedList)
+      }
     } catch (err) {
-      console.error('Failed to load list items:', err)
-    }
-    // Pre-load products for search
-    try {
-      await globalProductsStore.fetchProducts()
-    } catch (err) {
-      console.error('Failed to load products:', err)
+      console.error('Failed to load list:', err)
+      // Only redirect if list doesn't exist
+      router.push('/')
+      return
     }
   }
+  
+  // Load list items
+  try {
+    await productsStore.loadListItems(listId.value)
+  } catch (err) {
+    console.error('Failed to load list items:', err)
+  }
+  
+  // Pre-load products for search
+  try {
+    await globalProductsStore.fetchProducts()
+  } catch (err) {
+    console.error('Failed to load products:', err)
+  }
+  
+  isLoading.value = false
 })
 </script>
 
 <template>
-  <div v-if="list" class="list-view">
+  <div v-if="isLoading" class="list-view">
+    <v-container class="py-8">
+      <div class="d-flex justify-center align-center" style="min-height: 50vh;">
+        <v-progress-circular indeterminate size="64" color="primary" />
+      </div>
+    </v-container>
+  </div>
+  <div v-else-if="list" class="list-view">
     <v-container class="py-8">
       <div class="d-flex align-center justify-space-between mb-8">
         <h1 class="page-title">{{ list.name }}</h1>
