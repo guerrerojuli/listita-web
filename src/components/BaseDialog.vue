@@ -3,12 +3,10 @@ interface Props {
   modelValue: boolean
   title: string
   maxWidth?: string | number
-  persistent?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   maxWidth: 500,
-  persistent: true,
 })
 
 const emit = defineEmits<{
@@ -24,7 +22,6 @@ function handleClose() {
   <v-dialog
     :model-value="props.modelValue"
     :max-width="props.maxWidth"
-    :persistent="props.persistent"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <v-card class="base-dialog">
