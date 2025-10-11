@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import NavBar from '@/components/NavBar.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
@@ -187,6 +188,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <NavBar />
   <div v-if="isLoading" class="list-view">
     <v-container class="py-8">
       <div class="d-flex justify-center align-center" style="min-height: 50vh;">

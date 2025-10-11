@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import NavBar from '@/components/NavBar.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 
@@ -121,6 +122,7 @@ function handleDeleteProduct(productId: string) {
 </script>
 
 <template>
+  <NavBar />
   <div class="products-view">
     <v-container class="py-8">
       <div class="d-flex align-center justify-space-between mb-8">

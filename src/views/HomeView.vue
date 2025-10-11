@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import NavBar from '@/components/NavBar.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ListCard from '@/components/ListCard.vue'
 import { useListsStore } from '@/stores/lists'
@@ -110,6 +111,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <NavBar />
   <div class="home-container">
     <v-container class="py-8">
       <div class="d-flex align-center justify-space-between mb-8">
