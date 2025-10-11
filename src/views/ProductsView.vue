@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
+import BaseDialog from '@/components/BaseDialog.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 
@@ -64,9 +65,16 @@ async function createNewCategory() {
 async function createNewProduct() {
   if (newProductName.value.trim() && newProductCategoryId.value) {
     const metadata: any = {}
-    if (newProductUnit.value && newProductUnit.value !== 'none') metadata.unit = newProductUnit.value
-    if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value)) metadata.unitValue = newProductUnitValue.value
-    await productsStore.addProduct(newProductName.value.trim(), newProductCategoryId.value, undefined, metadata)
+    if (newProductUnit.value && newProductUnit.value !== 'none')
+      metadata.unit = newProductUnit.value
+    if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value))
+      metadata.unitValue = newProductUnitValue.value
+    await productsStore.addProduct(
+      newProductName.value.trim(),
+      newProductCategoryId.value,
+      undefined,
+      metadata,
+    )
     newProductName.value = ''
     newProductCategoryId.value = null
     newProductUnit.value = null
@@ -90,9 +98,11 @@ function handleEditProduct(productId: string) {
 async function updateProduct() {
   if (editingProduct.value && editProductName.value.trim() && editProductCategoryId.value) {
     const metadata: any = { ...(editingProduct.value.metadata || {}) }
-    if (editProductUnit.value && editProductUnit.value !== 'none') metadata.unit = editProductUnit.value
+    if (editProductUnit.value && editProductUnit.value !== 'none')
+      metadata.unit = editProductUnit.value
     else delete metadata.unit
-    if (editProductUnitValue.value !== null && !Number.isNaN(editProductUnitValue.value)) metadata.unitValue = editProductUnitValue.value
+    if (editProductUnitValue.value !== null && !Number.isNaN(editProductUnitValue.value))
+      metadata.unitValue = editProductUnitValue.value
     else delete metadata.unitValue
     await productsStore.updateProduct(editingProduct.value.id, {
       name: editProductName.value.trim(),
@@ -131,7 +141,9 @@ function handleDeleteProduct(productId: string) {
           <v-btn class="add-product-btn" elevation="0" @click="handleAddCategory">
             Add Category
           </v-btn>
-          <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct"> Add Product </v-btn>
+          <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct">
+            Add Product
+          </v-btn>
         </div>
       </div>
 
@@ -166,222 +178,149 @@ function handleDeleteProduct(productId: string) {
       </div>
 
       <!-- Dialog for adding new product -->
-      <v-dialog v-model="dialog" max-width="500" persistent>
-        <v-card class="product-dialog">
-          <div class="dialog-header">
-            <h2 class="dialog-title">Add product</h2>
-            <v-btn icon="mdi-close" variant="text" size="small" @click="dialog = false" />
-          </div>
+      <BaseDialog v-model="dialog" title="Add product">
+        <v-text-field
+          v-model="newProductName"
+          label="Name"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+        />
+        <v-select
+          v-model="newProductCategoryId"
+          :items="productsStore.categories"
+          item-title="name"
+          item-value="id"
+          label="Category"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+        />
+        <div class="form-row">
+          <v-select
+            v-model="newProductUnit"
+            :items="unitOptions"
+            item-title="title"
+            item-value="value"
+            label="Unit"
+            variant="outlined"
+            density="comfortable"
+          />
+          <v-text-field
+            v-model.number="newProductUnitValue"
+            type="number"
+            min="0"
+            step="any"
+            label="Value"
+            variant="outlined"
+            density="comfortable"
+          />
+        </div>
 
-          <v-card-text class="dialog-content">
-            <div class="form-field">
-              <label class="field-label">Name</label>
-              <v-text-field
-                v-model="newProductName"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Enter product name"
-              />
-            </div>
-            <div class="form-field">
-              <label class="field-label">Category</label>
-              <v-select
-                v-model="newProductCategoryId"
-                :items="productsStore.categories"
-                item-title="name"
-                item-value="id"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Select a category"
-              />
-            </div>
-            <div class="form-row">
-              <div class="form-field flex-1">
-                <label class="field-label">Unit</label>
-                <v-select
-                  v-model="newProductUnit"
-                  :items="unitOptions"
-                  item-title="title"
-                  item-value="value"
-                  variant="outlined"
-                  density="comfortable"
-                  hide-details
-                  placeholder="Select a unit"
-                />
-              </div>
-              <div class="form-field flex-1">
-                <label class="field-label">Medida</label>
-                <v-text-field
-                  v-model.number="newProductUnitValue"
-                  type="number"
-                  min="0"
-                  step="any"
-                  variant="outlined"
-                  density="comfortable"
-                  hide-details
-                  placeholder="Ej: 2"
-                />
-              </div>
-            </div>
-          </v-card-text>
-
-          <v-card-actions class="dialog-actions">
-            <v-btn class="btn-cancel" elevation="0" @click="dialog = false"> Cancel </v-btn>
-            <v-btn
-              class="btn-add"
-              elevation="0"
-              :disabled="!newProductName.trim() || !newProductCategoryId"
-              @click="createNewProduct"
-            >
-              Add
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!newProductName.trim() || !newProductCategoryId"
+            @click="createNewProduct"
+          >
+            Add
+          </v-btn>
+        </template>
+      </BaseDialog>
 
       <!-- Dialog for editing product -->
-      <v-dialog v-model="editDialog" max-width="500" persistent>
-        <v-card class="product-dialog">
-          <div class="dialog-header">
-            <h2 class="dialog-title">Edit product</h2>
-            <v-btn icon="mdi-close" variant="text" size="small" @click="editDialog = false" />
-          </div>
+      <BaseDialog v-model="editDialog" title="Edit product">
+        <v-text-field
+          v-model="editProductName"
+          label="Name"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+        />
+        <v-select
+          v-model="editProductCategoryId"
+          :items="productsStore.categories"
+          item-title="name"
+          item-value="id"
+          label="Category"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+        />
+        <div class="form-row">
+          <v-select
+            v-model="editProductUnit"
+            :items="unitOptions"
+            item-title="title"
+            item-value="value"
+            label="Unit"
+            variant="outlined"
+            density="comfortable"
+          />
+          <v-text-field
+            v-model.number="editProductUnitValue"
+            type="number"
+            min="0"
+            step="any"
+            label="Value"
+            variant="outlined"
+            density="comfortable"
+          />
+        </div>
 
-          <v-card-text class="dialog-content">
-            <div class="form-field">
-              <label class="field-label">Name</label>
-              <v-text-field
-                v-model="editProductName"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Enter product name"
-              />
-            </div>
-
-            <div class="form-field">
-              <label class="field-label">Category</label>
-              <v-select
-                v-model="editProductCategoryId"
-                :items="productsStore.categories"
-                item-title="name"
-                item-value="id"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Select a category"
-              />
-            </div>
-            <div class="form-field">
-              <label class="field-label">Medida</label>
-              <v-text-field
-                v-model.number="editProductUnitValue"
-                type="number"
-                min="0"
-                step="any"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Ej: 2"
-              />
-            </div>
-            <div class="form-row">
-              <div class="form-field flex-1">
-                <label class="field-label">Unit</label>
-                <v-select
-                  v-model="editProductUnit"
-                  :items="unitOptions"
-                  item-title="title"
-                  item-value="value"
-                  variant="outlined"
-                  density="comfortable"
-                  hide-details
-                  placeholder="Select a unit"
-                />
-              </div>
-              <div class="form-field flex-1">
-                <label class="field-label">Medida</label>
-                <v-text-field
-                  v-model.number="editProductUnitValue"
-                  type="number"
-                  min="0"
-                  step="any"
-                  variant="outlined"
-                  density="comfortable"
-                  hide-details
-                  placeholder="Ej: 2"
-                />
-              </div>
-            </div>
-          </v-card-text>
-
-          <v-card-actions class="dialog-actions">
-            <v-btn
-              class="btn-remove"
-              elevation="0"
-              @click="
-                () => {
-                  if (editingProduct) {
-                    handleDeleteProduct(editingProduct.id)
-                    editDialog = false
-                  }
+        <template #actions="{ close }">
+          <v-btn
+            class="btn-remove"
+            elevation="0"
+            @click="
+              () => {
+                if (editingProduct) {
+                  handleDeleteProduct(editingProduct.id)
+                  close()
                 }
-              "
-            >
-              Remove
-            </v-btn>
-            <v-btn
-              class="btn-add"
-              elevation="0"
-              :disabled="!editProductName.trim() || !editProductCategoryId"
-              @click="updateProduct"
-            >
-              Save
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+              }
+            "
+          >
+            Remove
+          </v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!editProductName.trim() || !editProductCategoryId"
+            @click="updateProduct"
+          >
+            Save
+          </v-btn>
+        </template>
+      </BaseDialog>
 
       <!-- Dialog for adding new category -->
-      <v-dialog v-model="categoryDialog" max-width="500" persistent>
-        <v-card class="product-dialog">
-          <div class="dialog-header">
-            <h2 class="dialog-title">Add category</h2>
-            <v-btn icon="mdi-close" variant="text" size="small" @click="categoryDialog = false" />
-          </div>
+      <BaseDialog v-model="categoryDialog" title="Add category">
+        <v-alert v-if="categoryError" type="error" class="mb-4" density="comfortable">
+          {{ categoryError }}
+        </v-alert>
+        <v-text-field
+          v-model="newCategoryName"
+          label="Category name"
+          variant="outlined"
+          density="comfortable"
+          @keyup.enter="createNewCategory"
+        />
 
-          <v-card-text class="dialog-content">
-            <v-alert v-if="categoryError" type="error" class="mb-4" density="comfortable">
-              {{ categoryError }}
-            </v-alert>
-            <div class="form-field">
-              <label class="field-label">Category Name</label>
-              <v-text-field
-                v-model="newCategoryName"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                placeholder="Enter category name"
-                @keyup.enter="createNewCategory"
-              />
-            </div>
-          </v-card-text>
-
-          <v-card-actions class="dialog-actions">
-            <v-btn class="btn-cancel" elevation="0" @click="categoryDialog = false"> Cancel </v-btn>
-            <v-btn
-              class="btn-add"
-              elevation="0"
-              :disabled="!newCategoryName.trim()"
-              @click="createNewCategory"
-            >
-              Add
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!newCategoryName.trim()"
+            @click="createNewCategory"
+          >
+            Add
+          </v-btn>
+        </template>
+      </BaseDialog>
     </v-container>
   </div>
 </template>
@@ -431,92 +370,12 @@ function handleDeleteProduct(productId: string) {
   padding: 4rem 2rem;
 }
 
-/* Dialog styles */
-.product-dialog {
-  border-radius: 12px;
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
-}
-
-.dialog-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #000;
-  margin: 0;
-}
-
-.dialog-content {
-  padding: 0 1.5rem 1.5rem 1.5rem !important;
-}
-
-.form-field {
-  margin-bottom: 1.5rem;
-}
-
-.form-field:last-child {
-  margin-bottom: 0;
-}
-
 .form-row {
   display: flex;
   gap: 1rem;
 }
 
-.flex-1 {
-  flex: 1;
-}
-
-.field-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #000;
-  margin-bottom: 0.5rem;
-}
-
-.dialog-actions {
-  padding: 1.5rem !important;
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.btn-cancel {
-  background-color: #e0e0e0 !important;
-  color: #424242 !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.btn-remove {
-  background-color: #f44336 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.btn-add {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
 .buttons-row {
-  gap: 12px; /* ensure spacing between header buttons */
+  gap: 12px;
 }
 </style>

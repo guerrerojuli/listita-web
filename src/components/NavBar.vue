@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import BaseDialog from '@/components/BaseDialog.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -144,71 +145,72 @@ async function handleChangePassword() {
   </v-app-bar>
 
   <!-- Profile Edit Dialog -->
-  <v-dialog v-model="showProfileDialog" max-width="500" persistent>
-    <v-card class="product-dialog">
-      <div class="dialog-header">
-        <h2 class="dialog-title">Edit Profile</h2>
-        <v-btn icon="mdi-close" variant="text" size="small" @click="showProfileDialog = false" />
-      </div>
-      <v-card-text class="dialog-content">
-        <v-alert v-if="profileError" type="error" class="mb-4" density="comfortable">
-          {{ profileError }}
-        </v-alert>
-        <v-alert v-if="profileSuccess" type="success" class="mb-4" density="comfortable">
-          {{ profileSuccess }}
-        </v-alert>
-        <v-text-field v-model="editName" label="First Name" variant="outlined" class="mb-4" />
-        <v-text-field v-model="editSurname" label="Last Name" variant="outlined" />
-      </v-card-text>
-      <v-card-actions class="dialog-actions">
-        <v-btn class="btn-cancel" elevation="0" @click="showProfileDialog = false">Cancel</v-btn>
-        <v-btn class="btn-add" elevation="0" @click="handleUpdateProfile">Save</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <BaseDialog v-model="showProfileDialog" title="Edit Profile">
+    <v-alert v-if="profileError" type="error" class="mb-4" density="comfortable">
+      {{ profileError }}
+    </v-alert>
+    <v-alert v-if="profileSuccess" type="success" class="mb-4" density="comfortable">
+      {{ profileSuccess }}
+    </v-alert>
+    <v-text-field
+      v-model="editName"
+      label="First Name"
+      variant="outlined"
+      density="comfortable"
+      class="mb-4"
+    />
+    <v-text-field
+      v-model="editSurname"
+      label="Last Name"
+      variant="outlined"
+      density="comfortable"
+    />
+
+    <template #actions="{ close }">
+      <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+      <v-btn class="btn-add" elevation="0" @click="handleUpdateProfile">Save</v-btn>
+    </template>
+  </BaseDialog>
 
   <!-- Password Change Dialog -->
-  <v-dialog v-model="showPasswordDialog" max-width="500" persistent>
-    <v-card class="product-dialog">
-      <div class="dialog-header">
-        <h2 class="dialog-title">Change Password</h2>
-        <v-btn icon="mdi-close" variant="text" size="small" @click="showPasswordDialog = false" />
-      </div>
-      <v-card-text class="dialog-content">
-        <v-alert v-if="passwordError" type="error" class="mb-4" density="comfortable">
-          {{ passwordError }}
-        </v-alert>
-        <v-alert v-if="passwordSuccess" type="success" class="mb-4" density="comfortable">
-          {{ passwordSuccess }}
-        </v-alert>
-        <v-text-field
-          v-model="currentPassword"
-          label="Current Password"
-          type="password"
-          variant="outlined"
-          class="mb-4"
-        />
-        <v-text-field
-          v-model="newPassword"
-          label="New Password"
-          type="password"
-          variant="outlined"
-          class="mb-4"
-          hint="Minimum 6 characters"
-        />
-        <v-text-field
-          v-model="confirmPassword"
-          label="Confirm New Password"
-          type="password"
-          variant="outlined"
-        />
-      </v-card-text>
-      <v-card-actions class="dialog-actions">
-        <v-btn class="btn-cancel" elevation="0" @click="showPasswordDialog = false">Cancel</v-btn>
-        <v-btn class="btn-add" elevation="0" @click="handleChangePassword">Change Password</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <BaseDialog v-model="showPasswordDialog" title="Change Password">
+    <v-alert v-if="passwordError" type="error" class="mb-4" density="comfortable">
+      {{ passwordError }}
+    </v-alert>
+    <v-alert v-if="passwordSuccess" type="success" class="mb-4" density="comfortable">
+      {{ passwordSuccess }}
+    </v-alert>
+    <v-text-field
+      v-model="currentPassword"
+      label="Current Password"
+      type="password"
+      variant="outlined"
+      density="comfortable"
+      class="mb-4"
+    />
+    <v-text-field
+      v-model="newPassword"
+      label="New Password"
+      type="password"
+      variant="outlined"
+      density="comfortable"
+      class="mb-4"
+      hint="Minimum 6 characters"
+      persistent-hint
+    />
+    <v-text-field
+      v-model="confirmPassword"
+      label="Confirm New Password"
+      type="password"
+      variant="outlined"
+      density="comfortable"
+    />
+
+    <template #actions="{ close }">
+      <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+      <v-btn class="btn-add" elevation="0" @click="handleChangePassword">Change Password</v-btn>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
@@ -262,55 +264,5 @@ async function handleChangePassword() {
 
 .nav-link-active {
   color: #000;
-}
-
-/* Dialog styles */
-.product-dialog {
-  border-radius: 12px;
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
-}
-
-.dialog-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #000;
-  margin: 0;
-}
-
-.dialog-content {
-  padding: 0 1.5rem 1.5rem 1.5rem !important;
-}
-
-.dialog-actions {
-  padding: 1.5rem !important;
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.btn-cancel {
-  background-color: #e0e0e0 !important;
-  color: #424242 !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.btn-add {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
 }
 </style>
