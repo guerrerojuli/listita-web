@@ -78,67 +78,71 @@ function viewHistory() {
         <p class="list-card-subtitle">{{ subtitle }}</p>
       </div>
 
-      <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">
+      <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end" offset="8">
         <template v-slot:activator="{ props: menuProps }">
           <v-btn
             icon="mdi-dots-vertical"
             variant="text"
             size="small"
+            class="menu-button"
             v-bind="menuProps"
             @click.stop
           />
         </template>
 
-        <v-card min-width="240" class="menu-card" elevation="0">
-          <v-list class="menu-list">
-            <v-list-item @click="toggleRecurrent" class="menu-item" rounded="lg">
+        <v-card min-width="220" class="menu-card" elevation="8">
+          <v-list class="menu-list" density="compact">
+            <v-list-item @click="toggleRecurrent" class="menu-item">
               <template v-slot:prepend>
                 <v-icon
                   :icon="list.recurring ? 'mdi-star' : 'mdi-star-outline'"
                   size="20"
                   class="menu-icon"
+                  :class="{ 'menu-icon-active': list.recurring }"
                 />
               </template>
-              <v-list-item-title class="menu-text">Recurring</v-list-item-title>
-            </v-list-item>
-
-            <v-list-item @click="deleteList" class="menu-item menu-item-danger" rounded="lg">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
-              </template>
-              <v-list-item-title class="menu-text">Delete</v-list-item-title>
+              <v-list-item-title class="menu-text">
+                {{ list.recurring ? 'Remove from Recurring' : 'Mark as Recurring' }}
+              </v-list-item-title>
             </v-list-item>
 
             <v-divider class="menu-divider" />
 
-            <v-list-item @click="renameList" class="menu-item" rounded="lg">
+            <v-list-item @click="renameList" class="menu-item">
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Rename</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="togglePrivate" class="menu-item" rounded="lg">
+            <v-list-item @click="togglePrivate" class="menu-item">
               <template v-slot:prepend>
                 <v-icon icon="mdi-lock-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Make private</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="shareList" class="menu-item" rounded="lg">
+            <v-list-item @click="shareList" class="menu-item">
               <template v-slot:prepend>
-                <v-icon icon="mdi-account-multiple-outline" size="20" class="menu-icon" />
+                <v-icon icon="mdi-share-variant-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Share</v-list-item-title>
             </v-list-item>
 
-            <v-divider class="menu-divider" />
-
-            <v-list-item @click="viewHistory" class="menu-item" rounded="lg">
+            <v-list-item @click="viewHistory" class="menu-item">
               <template v-slot:prepend>
                 <v-icon icon="mdi-history" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Purchase History</v-list-item-title>
+            </v-list-item>
+
+            <v-divider class="menu-divider" />
+
+            <v-list-item @click="deleteList" class="menu-item menu-item-danger">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
+              </template>
+              <v-list-item-title class="menu-text">Delete</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card>
@@ -186,11 +190,19 @@ function viewHistory() {
   margin: 0;
 }
 
+.menu-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.menu-button:hover {
+  opacity: 1;
+}
+
 .menu-card {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-  border: 1px solid #e0e0e0;
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .menu-list {
@@ -200,44 +212,61 @@ function viewHistory() {
 
 .menu-item {
   cursor: pointer;
-  min-height: 44px;
+  min-height: 48px;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
   margin-bottom: 2px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .menu-item:hover {
   background-color: #f5f5f5 !important;
+  transform: translateX(2px);
 }
 
 .menu-item:active {
   background-color: #eeeeee !important;
+  transform: translateX(0);
 }
 
 .menu-icon {
+  color: #616161;
+  transition: color 0.15s ease;
+}
+
+.menu-icon-active {
+  color: #ffa726 !important;
+}
+
+.menu-item:hover .menu-icon {
   color: #424242;
-  margin-right: 12px;
 }
 
 .menu-text {
   font-size: 0.9375rem;
   font-weight: 500;
   color: #212121;
+  letter-spacing: -0.01em;
+}
+
+.menu-item-danger {
+  margin-top: 4px;
 }
 
 .menu-item-danger:hover {
   background-color: #ffebee !important;
 }
 
-.menu-item-danger .menu-icon {
-  color: #f44336;
+.menu-item-danger:hover .menu-icon {
+  color: #d32f2f;
 }
 
 .menu-item-danger .menu-text {
-  color: #f44336;
+  color: #e53935;
 }
 
 .menu-divider {
   margin: 0.5rem 0;
-  border-color: #e0e0e0;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 </style>
