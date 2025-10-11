@@ -25,12 +25,12 @@ export const usePurchasesStore = defineStore('purchases', () => {
   }) {
     loading.value = true
     try {
-      const data = await apiFetch<Purchase[]>('/api/purchases', {
+      const data = await apiFetch<{ data: Purchase[] }>('/api/purchases', {
         method: 'GET',
         query: params as any,
       })
-      purchases.value = data
-      return data
+      purchases.value = data.data || []
+      return data.data || []
     } finally {
       loading.value = false
     }
@@ -63,4 +63,3 @@ export const usePurchasesStore = defineStore('purchases', () => {
     getPurchasesByListId,
   }
 })
-

@@ -26,13 +26,11 @@ export const useListsStore = defineStore('lists', () => {
 
   // Actions
   async function fetchLists(params?: { name?: string; owner?: boolean; recurring?: boolean }) {
-    const data = await apiFetch<{ items?: ShoppingList[] } | ShoppingList[]>('/api/shopping-lists', {
+    const data = await apiFetch<{ data: ShoppingList[] }>('/api/shopping-lists', {
       method: 'GET',
       query: params as any,
     })
-    // Some APIs wrap in {items: []}; handle either
-    const array = Array.isArray(data) ? data : (data.items ?? [])
-    lists.value = array
+    lists.value = data.data || []
   }
 
   async function createList(name: string, recurring: boolean = false) {
@@ -58,7 +56,12 @@ export const useListsStore = defineStore('lists', () => {
 
   async function updateList(
     id: number,
-    updates: { name?: string; description?: string; recurring?: boolean; metadata?: Record<string, unknown> },
+    updates: {
+      name?: string
+      description?: string
+      recurring?: boolean
+      metadata?: Record<string, unknown>
+    },
   ) {
     const updated = await apiFetch<ShoppingList>(`/api/shopping-lists/${id}`, {
       method: 'PUT',

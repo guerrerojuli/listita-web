@@ -14,12 +14,13 @@ export const useProductsStore = defineStore('products', () => {
 
   // Actions
   async function loadListItems(listId: number, params?: Record<string, unknown>) {
-    const data = await apiFetch<ListItem[]>(`/api/shopping-lists/${listId}/items`, {
+    const data = await apiFetch<{ data: ListItem[] }>(`/api/shopping-lists/${listId}/items`, {
       method: 'GET',
       query: params,
     })
     // Tag items with listId for local filtering convenience
-    items.value = data.map((d) => Object.assign({}, d, { listId })) as any
+    const listItems = data.data || []
+    items.value = listItems.map((d) => Object.assign({}, d, { listId })) as any
   }
 
   async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
@@ -63,7 +64,8 @@ export const useProductsStore = defineStore('products', () => {
 
   function decrementQuantity(listId: number, itemId: number) {
     const item = items.value.find((i) => i.id === itemId)
-    if (item && !item.purchased && item.quantity > 1) updateQuantity(listId, itemId, item.quantity - 1, item.unit)
+    if (item && !item.purchased && item.quantity > 1)
+      updateQuantity(listId, itemId, item.quantity - 1, item.unit)
   }
 
   return {
