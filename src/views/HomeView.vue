@@ -168,10 +168,13 @@ onMounted(() => {
       </div>
 
       <!-- Dialog for creating new list -->
-      <v-dialog v-model="dialog" max-width="500">
-        <v-card>
-          <v-card-title class="text-h5">New List</v-card-title>
-          <v-card-text>
+      <v-dialog v-model="dialog" max-width="500" persistent>
+        <v-card class="product-dialog">
+          <div class="dialog-header">
+            <h2 class="dialog-title">New List</h2>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="dialog = false" />
+          </div>
+          <v-card-text class="dialog-content">
             <v-text-field
               v-model="newListName"
               label="List name"
@@ -180,12 +183,11 @@ onMounted(() => {
               @keyup.enter="createNewList"
             />
           </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+          <v-card-actions class="dialog-actions">
+            <v-btn class="btn-cancel" elevation="0" @click="dialog = false">Cancel</v-btn>
             <v-btn
-              color="primary"
-              variant="elevated"
+              class="btn-add"
+              elevation="0"
               :disabled="!newListName.trim()"
               @click="createNewList"
             >
@@ -196,10 +198,18 @@ onMounted(() => {
       </v-dialog>
 
       <!-- Dialog for purchase history -->
-      <v-dialog v-model="showPurchasesDialog" max-width="800">
-        <v-card>
-          <v-card-title class="text-h5">Purchase History</v-card-title>
-          <v-card-text>
+      <v-dialog v-model="showPurchasesDialog" max-width="800" persistent>
+        <v-card class="product-dialog">
+          <div class="dialog-header">
+            <h2 class="dialog-title">Purchase History</h2>
+            <v-btn
+              icon="mdi-close"
+              variant="text"
+              size="small"
+              @click="showPurchasesDialog = false"
+            />
+          </div>
+          <v-card-text class="dialog-content">
             <div v-if="purchasesStore.loading" class="text-center py-8">
               <v-progress-circular indeterminate color="primary" />
             </div>
@@ -234,18 +244,22 @@ onMounted(() => {
               </v-list-item>
             </v-list>
           </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="showPurchasesDialog = false">Close</v-btn>
+          <v-card-actions class="dialog-actions">
+            <v-btn class="btn-cancel" elevation="0" @click="showPurchasesDialog = false"
+              >Close</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-dialog>
 
       <!-- Dialog for sharing list -->
       <v-dialog v-model="showShareDialog" max-width="500" persistent>
-        <v-card>
-          <v-card-title class="text-h5">Share List</v-card-title>
-          <v-card-text>
+        <v-card class="product-dialog">
+          <div class="dialog-header">
+            <h2 class="dialog-title">Share List</h2>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="showShareDialog = false" />
+          </div>
+          <v-card-text class="dialog-content">
             <v-alert v-if="shareError" type="error" class="mb-4" density="comfortable">
               {{ shareError }}
             </v-alert>
@@ -259,12 +273,11 @@ onMounted(() => {
               @keyup.enter="submitShareList"
             />
           </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="showShareDialog = false">Cancel</v-btn>
+          <v-card-actions class="dialog-actions">
+            <v-btn class="btn-cancel" elevation="0" @click="showShareDialog = false">Cancel</v-btn>
             <v-btn
-              color="primary"
-              variant="elevated"
+              class="btn-add"
+              elevation="0"
               :disabled="!shareEmail.trim()"
               @click="submitShareList"
             >
@@ -309,5 +322,55 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Dialog styles */
+.product-dialog {
+  border-radius: 12px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #000;
+  margin: 0;
+}
+
+.dialog-content {
+  padding: 0 1.5rem 1.5rem 1.5rem !important;
+}
+
+.dialog-actions {
+  padding: 1.5rem !important;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  background-color: #e0e0e0 !important;
+  color: #424242 !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem !important;
+}
+
+.btn-add {
+  background-color: #000 !important;
+  color: white !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem !important;
 }
 </style>

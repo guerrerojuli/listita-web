@@ -43,7 +43,7 @@ function openProfileDialog() {
 async function handleUpdateProfile() {
   profileError.value = ''
   profileSuccess.value = ''
-  
+
   try {
     await auth.updateProfile({
       name: editName.value.trim(),
@@ -72,17 +72,17 @@ function openPasswordDialog() {
 async function handleChangePassword() {
   passwordError.value = ''
   passwordSuccess.value = ''
-  
+
   if (newPassword.value !== confirmPassword.value) {
     passwordError.value = 'Passwords do not match'
     return
   }
-  
+
   if (newPassword.value.length < 6) {
     passwordError.value = 'Password must be at least 6 characters'
     return
   }
-  
+
   try {
     await auth.changePassword(currentPassword.value, newPassword.value)
     passwordSuccess.value = 'Password changed successfully'
@@ -119,7 +119,9 @@ async function handleChangePassword() {
           <v-card min-width="280">
             <v-list>
               <v-list-item v-if="auth.user" class="pb-2">
-                <v-list-item-title class="font-weight-bold">{{ auth.user.name }} {{ auth.user.surname }}</v-list-item-title>
+                <v-list-item-title class="font-weight-bold"
+                  >{{ auth.user.name }} {{ auth.user.surname }}</v-list-item-title
+                >
                 <v-list-item-subtitle>{{ auth.user.email }}</v-list-item-subtitle>
               </v-list-item>
               <v-divider />
@@ -142,10 +144,13 @@ async function handleChangePassword() {
   </v-app-bar>
 
   <!-- Profile Edit Dialog -->
-  <v-dialog v-model="showProfileDialog" max-width="500">
-    <v-card>
-      <v-card-title class="text-h5">Edit Profile</v-card-title>
-      <v-card-text>
+  <v-dialog v-model="showProfileDialog" max-width="500" persistent>
+    <v-card class="product-dialog">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Edit Profile</h2>
+        <v-btn icon="mdi-close" variant="text" size="small" @click="showProfileDialog = false" />
+      </div>
+      <v-card-text class="dialog-content">
         <v-alert v-if="profileError" type="error" class="mb-4" density="comfortable">
           {{ profileError }}
         </v-alert>
@@ -155,51 +160,52 @@ async function handleChangePassword() {
         <v-text-field v-model="editName" label="First Name" variant="outlined" class="mb-4" />
         <v-text-field v-model="editSurname" label="Last Name" variant="outlined" />
       </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn variant="text" @click="showProfileDialog = false">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="handleUpdateProfile">Save</v-btn>
+      <v-card-actions class="dialog-actions">
+        <v-btn class="btn-cancel" elevation="0" @click="showProfileDialog = false">Cancel</v-btn>
+        <v-btn class="btn-add" elevation="0" @click="handleUpdateProfile">Save</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
   <!-- Password Change Dialog -->
-  <v-dialog v-model="showPasswordDialog" max-width="500">
-    <v-card>
-      <v-card-title class="text-h5">Change Password</v-card-title>
-      <v-card-text>
+  <v-dialog v-model="showPasswordDialog" max-width="500" persistent>
+    <v-card class="product-dialog">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Change Password</h2>
+        <v-btn icon="mdi-close" variant="text" size="small" @click="showPasswordDialog = false" />
+      </div>
+      <v-card-text class="dialog-content">
         <v-alert v-if="passwordError" type="error" class="mb-4" density="comfortable">
           {{ passwordError }}
         </v-alert>
         <v-alert v-if="passwordSuccess" type="success" class="mb-4" density="comfortable">
           {{ passwordSuccess }}
         </v-alert>
-        <v-text-field 
-          v-model="currentPassword" 
-          label="Current Password" 
-          type="password" 
-          variant="outlined" 
-          class="mb-4" 
+        <v-text-field
+          v-model="currentPassword"
+          label="Current Password"
+          type="password"
+          variant="outlined"
+          class="mb-4"
         />
-        <v-text-field 
-          v-model="newPassword" 
-          label="New Password" 
-          type="password" 
-          variant="outlined" 
+        <v-text-field
+          v-model="newPassword"
+          label="New Password"
+          type="password"
+          variant="outlined"
           class="mb-4"
           hint="Minimum 6 characters"
         />
-        <v-text-field 
-          v-model="confirmPassword" 
-          label="Confirm New Password" 
-          type="password" 
-          variant="outlined" 
+        <v-text-field
+          v-model="confirmPassword"
+          label="Confirm New Password"
+          type="password"
+          variant="outlined"
         />
       </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn variant="text" @click="showPasswordDialog = false">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="handleChangePassword">Change Password</v-btn>
+      <v-card-actions class="dialog-actions">
+        <v-btn class="btn-cancel" elevation="0" @click="showPasswordDialog = false">Cancel</v-btn>
+        <v-btn class="btn-add" elevation="0" @click="handleChangePassword">Change Password</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -256,5 +262,55 @@ async function handleChangePassword() {
 
 .nav-link-active {
   color: #000;
+}
+
+/* Dialog styles */
+.product-dialog {
+  border-radius: 12px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #000;
+  margin: 0;
+}
+
+.dialog-content {
+  padding: 0 1.5rem 1.5rem 1.5rem !important;
+}
+
+.dialog-actions {
+  padding: 1.5rem !important;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  background-color: #e0e0e0 !important;
+  color: #424242 !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem !important;
+}
+
+.btn-add {
+  background-color: #000 !important;
+  color: white !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem !important;
 }
 </style>
