@@ -61,4 +61,11 @@ export interface ListItem {
   product: Product
 }
 
-
+export interface Purchase {
+  id: number
+  metadata?: Record<string, unknown> | null
+  owner: User
+  list: ShoppingList
+  listItemArray: ListItem[]
+  createdAt?: string
+}

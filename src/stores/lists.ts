@@ -1,12 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiFetch } from '@/api/client'
-import type { ShoppingList } from '@/types/api'
+import { ShoppingListApi, ShoppingList } from '@/api/shoppingList'
+import type { ShoppingList as ShoppingListType } from '@/types/api'
 
 export const useListsStore = defineStore('lists', () => {
   // State
-  const lists = ref<ShoppingList[]>([])
-
+  const lists = ref<ShoppingListType[]>([])
   const searchQuery = ref('')
 
   // Getters
@@ -19,39 +18,38 @@ export const useListsStore = defineStore('lists', () => {
   )
 
   // Helper function
-  function matchesSearch(list: ShoppingList): boolean {
+  function matchesSearch(list: ShoppingListType): boolean {
     if (!searchQuery.value) return true
     return list.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   }
 
+  function mapShoppingList(data: ShoppingListType): ShoppingListType {
+    // Return data as-is from API, no need to instantiate class
+    return data
+  }
+
   // Actions
   async function fetchLists(params?: { name?: string; owner?: boolean; recurring?: boolean }) {
-    const data = await apiFetch<{ data: ShoppingList[] }>('/api/shopping-lists', {
-      method: 'GET',
-      query: params as any,
-    })
-    lists.value = data.data || []
+    const result = await ShoppingListApi.getAll(undefined, params)
+    lists.value = result.data.map((list) => mapShoppingList(list as unknown as ShoppingListType))
   }
 
   async function createList(name: string, recurring: boolean = false) {
-    const created = await apiFetch<ShoppingList>('/api/shopping-lists', {
-      method: 'POST',
-      json: { name, description: '', recurring, metadata: {} },
-    })
+    const shoppingList = new ShoppingList(name, recurring, undefined, '', {})
+    const result = await ShoppingListApi.add(shoppingList)
+    const created = mapShoppingList(result as unknown as ShoppingListType)
     lists.value.unshift(created)
   }
 
   async function deleteList(id: number) {
-    await apiFetch(`/api/shopping-lists/${id}`, { method: 'DELETE' })
+    await ShoppingListApi.remove(id)
     const index = lists.value.findIndex((list) => list.id === id)
     if (index !== -1) lists.value.splice(index, 1)
   }
 
   async function getListById(id: number) {
-    const list = await apiFetch<ShoppingList>(`/api/shopping-lists/${id}`, {
-      method: 'GET',
-    })
-    return list
+    const result = await ShoppingListApi.get(id)
+    return mapShoppingList(result as unknown as ShoppingListType)
   }
 
   async function updateList(
@@ -63,55 +61,40 @@ export const useListsStore = defineStore('lists', () => {
       metadata?: Record<string, unknown>
     },
   ) {
-    const updated = await apiFetch<ShoppingList>(`/api/shopping-lists/${id}`, {
-      method: 'PUT',
-      json: updates,
-    })
+    const list = await ShoppingListApi.get(id)
+    const updatedList = Object.assign(list, updates)
+    const result = await ShoppingListApi.modify(updatedList)
+    const updated = mapShoppingList(result as unknown as ShoppingListType)
     const index = lists.value.findIndex((list) => list.id === id)
     if (index !== -1) lists.value[index] = updated
     return updated
   }
 
   async function purchaseList(id: number) {
-    await apiFetch(`/api/shopping-lists/${id}/purchase`, {
-      method: 'POST',
-    })
+    await ShoppingListApi.purchase(id)
     // Optionally refresh the list after purchase
     await fetchLists()
   }
 
   async function resetListItems(id: number) {
-    await apiFetch(`/api/shopping-lists/${id}/reset`, {
-      method: 'POST',
-    })
+    await ShoppingListApi.reset(id)
     // Items will need to be refreshed in the products store
   }
 
   async function moveToPantry(id: number, pantryId: number) {
-    await apiFetch(`/api/shopping-lists/${id}/move-to-pantry`, {
-      method: 'POST',
-      json: { pantry_id: pantryId },
-    })
+    await ShoppingListApi.moveToPantry(id, pantryId)
   }
 
   async function shareList(id: number, email: string) {
-    await apiFetch(`/api/shopping-lists/${id}/share`, {
-      method: 'POST',
-      json: { email },
-    })
+    await ShoppingListApi.share(id, email)
   }
 
   async function getSharedUsers(id: number) {
-    const users = await apiFetch<any[]>(`/api/shopping-lists/${id}/shared-users`, {
-      method: 'GET',
-    })
-    return users
+    return await ShoppingListApi.getSharedUsers(id)
   }
 
   async function revokeAccess(listId: number, userId: number) {
-    await apiFetch(`/api/shopping-lists/${listId}/share/${userId}`, {
-      method: 'DELETE',
-    })
+    await ShoppingListApi.revokeAccess(listId, userId)
   }
 
   function updateSearch(query: string) {

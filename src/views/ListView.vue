@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import SearchDropdown from '@/components/SearchDropdown.vue'
+import BaseDialog from '@/components/BaseDialog.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
@@ -18,18 +20,25 @@ const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
 
 // Update document title when list changes
-watch(list, (newList) => {
-  if (newList) {
-    document.title = `Listita - ${newList.name}`
-  }
-}, { immediate: true })
+watch(
+  list,
+  (newList) => {
+    if (newList) {
+      document.title = `Listita - ${newList.name}`
+    }
+  },
+  { immediate: true },
+)
 
 const items = computed(() => productsStore.getItemsByListId(listId.value))
 
 const searchQuery = ref('')
-const showSearchResults = ref(false)
-const isSearching = ref(false)
 const isLoading = ref(false)
+const isSearching = ref(false)
+
+const showDeleteDialog = ref(false)
+const deleteItemId = ref<number | null>(null)
+const deleteProductName = ref('')
 
 // Filter list items based on search query
 const filteredListItems = computed(() => {
@@ -42,7 +51,7 @@ const filteredListItems = computed(() => {
 // Get available products to add (excluding ones already in list)
 const availableProducts = computed(() => {
   if (!searchQuery.value) return []
-  const itemProductIds = new Set((items.value || []).map(i => i.product?.id).filter(Boolean))
+  const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
   return (globalProductsStore.products || []).filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
     const notInList = !itemProductIds.has(p.id)
@@ -50,30 +59,46 @@ const availableProducts = computed(() => {
   })
 })
 
-async function handleSearchInput(value: string) {
-  searchQuery.value = value
-  
-  if (value.trim().length > 0) {
-    showSearchResults.value = true
-    isSearching.value = true
-    try {
-      await globalProductsStore.fetchProducts({ name: value.trim() })
-    } catch (err) {
-      console.error('Failed to search products:', err)
-    } finally {
-      isSearching.value = false
+async function handleSearchEnter() {
+  if (!searchQuery.value.trim()) return
+
+  // Search for products
+  isSearching.value = true
+  try {
+    await globalProductsStore.fetchProducts({ name: searchQuery.value.trim() })
+  } catch (err) {
+    console.error('Failed to search products:', err)
+  } finally {
+    isSearching.value = false
+  }
+
+  // If there's a matching product, add the first one
+  if (availableProducts.value.length > 0) {
+    const product = availableProducts.value[0]
+    if (product) {
+      await handleAddProduct(product)
     }
   } else {
-    showSearchResults.value = false
+    // No products found, clear search and navigate to create one
+    searchQuery.value = ''
+    router.push('/products')
   }
 }
 
 async function handleAddProduct(product: Product) {
   try {
+    // Check if product is already in the list
+    const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
+
+    if (isAlreadyInList) {
+      alert(`"${product.name}" is already in this list`)
+      searchQuery.value = ''
+      return
+    }
+
     const defaultUnit = (product.metadata as any)?.unit || 'unit'
     await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
     searchQuery.value = ''
-    showSearchResults.value = false
   } catch (err: any) {
     console.error('Failed to add product:', err)
     const errorMessage = err.message || 'Failed to add product to list'
@@ -81,13 +106,12 @@ async function handleAddProduct(product: Product) {
   }
 }
 
-function handleCloseSearch() {
-  showSearchResults.value = false
-  searchQuery.value = ''
-}
-
 function handleToggleComplete(itemId: number) {
-  productsStore.setPurchased(listId.value, itemId, !items.value.find((i) => i.id === itemId)?.purchased)
+  productsStore.setPurchased(
+    listId.value,
+    itemId,
+    !items.value.find((i) => i.id === itemId)?.purchased,
+  )
 }
 
 function handleIncrement(itemId: number) {
@@ -98,13 +122,25 @@ function handleDecrement(itemId: number) {
   productsStore.decrementQuantity(listId.value, itemId)
 }
 
-function handleDeleteProduct(productId: number) {
-  if (confirm('Are you sure you want to delete this product?')) {
-    productsStore.deleteItem(listId.value, productId)
+function handleDeleteProduct(itemId: number) {
+  const item = items.value?.find((i) => i.id === itemId)
+  if (item) {
+    deleteItemId.value = itemId
+    deleteProductName.value = item.product?.name || 'this item'
+    showDeleteDialog.value = true
   }
 }
 
-function handleEditProduct(_productId: number) {
+async function confirmDeleteProduct() {
+  if (deleteItemId.value) {
+    await productsStore.deleteItem(listId.value, deleteItemId.value)
+    showDeleteDialog.value = false
+    deleteItemId.value = null
+    deleteProductName.value = ''
+  }
+}
+
+function handleEditProduct() {
   // Not implemented in API for items (only quantity/unit). Handled via quantity controls.
 }
 
@@ -123,7 +159,7 @@ async function handlePurchaseList() {
       await listsStore.purchaseList(listId.value)
       alert('List purchased successfully!')
       router.push('/')
-    } catch (err) {
+    } catch {
       alert('Failed to purchase list')
     }
   }
@@ -134,7 +170,7 @@ async function handleResetList() {
     try {
       await listsStore.resetListItems(listId.value)
       await productsStore.loadListItems(listId.value)
-    } catch (err) {
+    } catch {
       alert('Failed to reset list')
     }
   }
@@ -152,7 +188,7 @@ function handleShareList() {
 
 onMounted(async () => {
   isLoading.value = true
-  
+
   // If list is not in store, try to fetch it from API
   if (!list.value) {
     try {
@@ -168,21 +204,21 @@ onMounted(async () => {
       return
     }
   }
-  
+
   // Load list items
   try {
     await productsStore.loadListItems(listId.value)
   } catch (err) {
     console.error('Failed to load list items:', err)
   }
-  
+
   // Pre-load products for search
   try {
     await globalProductsStore.fetchProducts()
   } catch (err) {
     console.error('Failed to load products:', err)
   }
-  
+
   isLoading.value = false
 })
 </script>
@@ -191,15 +227,27 @@ onMounted(async () => {
   <NavBar />
   <div v-if="isLoading" class="list-view">
     <v-container class="py-8">
-      <div class="d-flex justify-center align-center" style="min-height: 50vh;">
+      <div class="d-flex justify-center align-center" style="min-height: 50vh">
         <v-progress-circular indeterminate size="64" color="primary" />
       </div>
     </v-container>
   </div>
   <div v-else-if="list" class="list-view">
     <v-container class="py-8">
-      <div class="d-flex align-center justify-space-between mb-8">
-        <h1 class="page-title">{{ list.name }}</h1>
+      <div
+        class="d-flex align-center justify-space-between mb-8"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
+        <div class="d-flex align-center gap-3">
+          <v-btn
+            icon="mdi-arrow-left"
+            variant="text"
+            size="large"
+            class="back-button"
+            @click="router.push('/')"
+          />
+          <h1 class="page-title">{{ list.name }}</h1>
+        </div>
         <div class="header-actions">
           <v-menu>
             <template v-slot:activator="{ props }">
@@ -236,76 +284,29 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div
-        v-click-outside="() => { showSearchResults = false }"
-        class="mb-10 search-container"
-        style="max-width: 900px; margin-left: auto; margin-right: auto"
-      >
-        <v-text-field
+      <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
+        <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or add a product..."
-          variant="outlined"
-          density="comfortable"
-          bg-color="white"
-          rounded="lg"
-          hide-details
-          class="search-field"
-          @update:model-value="handleSearchInput"
-          @focus="searchQuery && (showSearchResults = true)"
-        >
-          <template v-slot:append-inner>
-            <v-btn
-              v-if="searchQuery"
-              icon="mdi-close"
-              variant="text"
-              size="small"
-              @click="handleCloseSearch"
-            />
-          </template>
-        </v-text-field>
-
-        <!-- Search results dropdown -->
-        <v-card
-          v-if="showSearchResults && searchQuery"
-          class="search-results mt-2"
-          elevation="8"
-        >
-          <v-list v-if="availableProducts && availableProducts.length > 0" density="compact">
-            <v-list-subheader>Products you can add</v-list-subheader>
-            <v-list-item
-              v-for="product in availableProducts"
-              :key="product.id"
-              @click="handleAddProduct(product)"
-              class="search-result-item"
-            >
-              <template v-slot:prepend>
-                <v-icon icon="mdi-plus-circle-outline" color="success" />
-              </template>
-              <v-list-item-title>{{ product.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ product.category?.name ?? 'Sin categoría' }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-          
-          <div v-else-if="isSearching" class="pa-4 text-center">
-            <v-progress-circular indeterminate size="24" />
-            <p class="text-caption mt-2">Searching...</p>
+          :show-dropdown="false"
+          @enter="handleSearchEnter"
+        />
+        <v-fade-transition>
+          <div v-if="searchQuery.trim() && !isSearching" class="search-hint mt-2">
+            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+            <span v-if="availableProducts.length > 0 && availableProducts[0]">
+              Press Enter to add "{{ availableProducts[0].name }}"
+            </span>
+            <span v-else> Press Enter to create "{{ searchQuery }}" </span>
           </div>
-          
-          <div v-else class="pa-4 text-center">
-            <p class="text-body-2 text-medium-emphasis mb-3">No products found for "{{ searchQuery }}"</p>
-            <v-btn
-              color="primary"
-              variant="text"
-              size="small"
-              @click="router.push('/products')"
-            >
-              Create new product
-            </v-btn>
-          </div>
-        </v-card>
+        </v-fade-transition>
       </div>
 
-      <div v-if="filteredListItems && filteredListItems.length > 0" class="mb-10">
+      <div
+        v-if="filteredListItems && filteredListItems.length > 0"
+        class="mb-10"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <h2 class="section-title mb-6">Shopping List</h2>
         <div class="products-grid">
           <ProductItem
@@ -316,16 +317,35 @@ onMounted(async () => {
             @increment="handleIncrement(item.id)"
             @decrement="handleDecrement(item.id)"
             @delete="handleDeleteProduct(item.id)"
-            @edit="handleEditProduct(item.id)"
+            @edit="handleEditProduct()"
           />
         </div>
       </div>
 
-      <div v-else-if="!searchQuery || (filteredListItems && filteredListItems.length === 0)" class="empty-state">
+      <div
+        v-else-if="!searchQuery || (filteredListItems && filteredListItems.length === 0)"
+        class="empty-state"
+      >
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-cart-outline</v-icon>
         <p class="text-h6 text-medium-emphasis">No products in this list</p>
         <p class="text-body-2 text-medium-emphasis">Use the search bar above to add products</p>
       </div>
+
+      <!-- Dialog for deleting product from list -->
+      <BaseDialog v-model="showDeleteDialog" title="Remove Product" :max-width="450">
+        <div class="delete-confirmation">
+          <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
+          <p class="delete-message">
+            Are you sure you want to remove <strong>{{ deleteProductName }}</strong> from this list?
+          </p>
+          <p class="delete-warning">This action cannot be undone.</p>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Remove</v-btn>
+        </template>
+      </BaseDialog>
     </v-container>
   </div>
 </template>
@@ -348,40 +368,16 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.search-container {
-  position: relative;
+.back-button:hover {
+  background-color: transparent !important;
 }
 
-.search-field {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.search-field :deep(.v-field) {
-  font-size: 1rem;
-}
-
-.search-field :deep(.v-field__input) {
-  padding: 1rem 1.25rem;
-}
-
-.search-results {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  max-height: 400px;
-  overflow-y: auto;
-  border-radius: 12px;
-}
-
-.search-result-item {
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.search-result-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+.search-hint {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.5rem 0.75rem;
 }
 
 .section-title {
@@ -399,5 +395,47 @@ onMounted(async () => {
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
+}
+
+/* Delete confirmation styles */
+.delete-confirmation {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.delete-message {
+  font-size: 1rem;
+  color: #212121;
+  margin-bottom: 0.5rem;
+}
+
+.delete-message strong {
+  color: #000;
+  font-weight: 600;
+}
+
+.delete-warning {
+  font-size: 0.875rem;
+  color: #e53935;
+  margin: 0;
+}
+
+.btn-remove {
+  color: white !important;
+  background-color: #e53935 !important;
+  text-transform: none;
+  font-weight: 500;
+  padding: 0 24px !important;
+  border-radius: 8px !important;
+}
+
+.btn-remove:hover {
+  background-color: #c62828 !important;
+}
+
+.btn-cancel {
+  text-transform: none;
+  font-weight: 500;
+  color: #666 !important;
 }
 </style>

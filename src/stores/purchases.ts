@@ -1,20 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apiFetch } from '@/api/client'
-import type { ShoppingList, ListItem, User } from '@/types/api'
-
-export interface Purchase {
-  id: number
-  metadata?: Record<string, unknown> | null
-  owner: User
-  list: ShoppingList
-  listItemArray: ListItem[]
-  createdAt?: string
-}
+import { PurchaseApi } from '@/api/purchase'
+import type { Purchase as PurchaseType } from '@/types/api'
 
 export const usePurchasesStore = defineStore('purchases', () => {
-  const purchases = ref<Purchase[]>([])
+  const purchases = ref<PurchaseType[]>([])
   const loading = ref(false)
+
+  function mapPurchase(data: PurchaseType): PurchaseType {
+    // Return data as-is from API, no need to instantiate class
+    return data
+  }
 
   async function fetchPurchases(params?: {
     list_id?: number
@@ -25,32 +21,26 @@ export const usePurchasesStore = defineStore('purchases', () => {
   }) {
     loading.value = true
     try {
-      const data = await apiFetch<{ data: Purchase[] }>('/api/purchases', {
-        method: 'GET',
-        query: params as any,
-      })
-      purchases.value = data.data || []
-      return data.data || []
+      const result = await PurchaseApi.getAll(undefined, params)
+      purchases.value = result.data.map((purchase) =>
+        mapPurchase(purchase as unknown as PurchaseType),
+      )
+      return purchases.value
     } finally {
       loading.value = false
     }
   }
 
   async function getPurchaseById(id: number) {
-    const purchase = await apiFetch<Purchase>(`/api/purchases/${id}`, {
-      method: 'GET',
-    })
-    return purchase
+    const result = await PurchaseApi.get(id)
+    return mapPurchase(result as unknown as PurchaseType)
   }
 
   async function restorePurchase(id: number) {
-    const restoredList = await apiFetch<ShoppingList>(`/api/purchases/${id}/restore`, {
-      method: 'POST',
-    })
-    return restoredList
+    return await PurchaseApi.restore(id)
   }
 
-  function getPurchasesByListId(listId: number): Purchase[] {
+  function getPurchasesByListId(listId: number): PurchaseType[] {
     return purchases.value.filter((p) => p.list.id === listId)
   }
 

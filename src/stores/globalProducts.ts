@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiFetch } from '@/api/client'
-import type { Product, Category } from '@/types/api'
+import { CategoryApi, Category } from '@/api/category'
+import { ProductApi, Product } from '@/api/product'
+import type { Product as ProductType, Category as CategoryType } from '@/types/api'
 
 export const useGlobalProductsStore = defineStore('globalProducts', () => {
   // State
-  const products = ref<Product[]>([])
-  const categories = ref<Category[]>([])
-
+  const products = ref<ProductType[]>([])
+  const categories = ref<CategoryType[]>([])
   const searchQuery = ref('')
 
   // Getters
@@ -21,32 +21,37 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     })
   })
 
+  function mapCategory(data: CategoryType): CategoryType {
+    // Return data as-is from API, no need to instantiate class
+    return data
+  }
+
+  function mapProduct(data: ProductType): ProductType {
+    // Return data as-is from API, no need to instantiate class
+    return data
+  }
+
   // Actions
   async function fetchProducts(params?: {
     name?: string
     category_id?: number
     pantry_id?: number
   }) {
-    const data = await apiFetch<{ data: Product[] }>('/api/products', {
-      method: 'GET',
-      query: params,
-    })
-    products.value = data.data || []
+    const result = await ProductApi.getAll(undefined, params)
+    products.value = result.data.map((product) => mapProduct(product as unknown as ProductType))
   }
 
   async function fetchCategories(params?: { name?: string }) {
-    const data = await apiFetch<{ data: Category[] }>('/api/categories', {
-      method: 'GET',
-      query: params as any,
-    })
-    categories.value = data.data || []
+    const result = await CategoryApi.getAll(undefined, params)
+    categories.value = result.data.map((category) =>
+      mapCategory(category as unknown as CategoryType),
+    )
   }
 
   async function createCategory(name: string, metadata?: Record<string, unknown>) {
-    const created = await apiFetch<Category>('/api/categories', {
-      method: 'POST',
-      json: { name, metadata: metadata ?? {} },
-    })
+    const category = new Category(name, undefined, metadata)
+    const result = await CategoryApi.add(category)
+    const created = mapCategory(result as unknown as CategoryType)
     categories.value.unshift(created)
     return created
   }
@@ -55,17 +60,17 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     id: number,
     updates: { name?: string; metadata?: Record<string, unknown> },
   ) {
-    const updated = await apiFetch<Category>(`/api/categories/${id}`, {
-      method: 'PUT',
-      json: updates,
-    })
+    const category = await CategoryApi.get(id)
+    const updatedCategory = Object.assign(category, updates)
+    const result = await CategoryApi.modify(updatedCategory)
+    const updated = mapCategory(result as unknown as CategoryType)
     const index = categories.value.findIndex((c) => c.id === id)
     if (index !== -1) categories.value[index] = updated
     return updated
   }
 
   async function deleteCategory(id: number) {
-    await apiFetch(`/api/categories/${id}`, { method: 'DELETE' })
+    await CategoryApi.remove(id)
     const index = categories.value.findIndex((c) => c.id === id)
     if (index !== -1) categories.value.splice(index, 1)
   }
@@ -74,45 +79,47 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     name: string,
     category_id: number,
     pantry_id?: number | null,
-    metadata?: any,
+    metadata?: unknown,
   ) {
-    const created = await apiFetch<Product>('/api/products', {
-      method: 'POST',
-      json: {
-        name,
-        category: { id: category_id },
-        pantry_id: pantry_id ?? null,
-        metadata: metadata ?? {},
-      },
-    })
+    const product = new Product(
+      name,
+      { id: category_id },
+      undefined,
+      pantry_id,
+      metadata as Record<string, unknown>,
+    )
+    const result = await ProductApi.add(product)
+    const created = mapProduct(result as unknown as ProductType)
     products.value.unshift(created)
   }
 
   async function deleteProduct(id: number) {
-    await apiFetch(`/api/products/${id}`, { method: 'DELETE' })
+    await ProductApi.remove(id)
     const index = products.value.findIndex((product) => product.id === id)
     if (index !== -1) products.value.splice(index, 1)
   }
 
   async function updateProduct(
     id: number,
-    updates: { name?: string; category_id?: number; pantry_id?: number | null; metadata?: any },
+    updates: { name?: string; category_id?: number; pantry_id?: number | null; metadata?: unknown },
   ) {
-    const payload: any = {}
+    const product = await ProductApi.get(id)
     if (updates.name !== undefined) {
-      payload.name = updates.name
+      product.name = updates.name
     }
     if (updates.category_id !== undefined) {
-      payload.category = { id: updates.category_id }
+      product.category = { id: updates.category_id }
     }
     if (updates.metadata !== undefined) {
-      payload.metadata = updates.metadata
+      product.metadata = updates.metadata as Record<string, unknown>
     }
-    const response = await apiFetch<any>(`/api/products/${id}`, { method: 'PUT', json: payload })
-    const updated: Product = response.product || response
+    const result = await ProductApi.modify(product)
+    const updated: ProductType = ('product' in result
+      ? result.product
+      : result) as unknown as ProductType
     const index = products.value.findIndex((p) => p.id === id)
     if (index !== -1) {
-      products.value.splice(index, 1, updated)
+      products.value.splice(index, 1, mapProduct(updated))
     }
   }
 

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
+import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -14,6 +15,7 @@ const { searchQuery, filteredProducts } = storeToRefs(productsStore)
 const dialog = ref(false)
 const editDialog = ref(false)
 const newProductName = ref('')
+const newProductError = ref('')
 const newProductCategoryId = ref<number | null>(null)
 const newProductUnit = ref<string | null>(null)
 const newProductUnitValue = ref<number | null>(null)
@@ -38,34 +40,66 @@ const unitOptions = [
   { title: 'Meters', value: 'meters' },
 ]
 
-const categoryDialog = ref(false)
-const newCategoryName = ref('')
-const categoryError = ref('')
+const showDeleteDialog = ref(false)
+const deleteProductId = ref<number | null>(null)
+const deleteProductName = ref('')
+
+const showInlineCategoryCreate = ref(false)
+const inlineCategoryName = ref('')
+const inlineCategoryError = ref('')
 
 function handleAddProduct() {
+  inlineCategoryName.value = ''
+  inlineCategoryError.value = ''
+  newProductError.value = ''
   dialog.value = true
 }
 
-function handleAddCategory() {
-  newCategoryName.value = ''
-  categoryError.value = ''
-  categoryDialog.value = true
+function handleSearchEnter() {
+  if (searchQuery.value.trim()) {
+    newProductName.value = searchQuery.value.trim()
+    searchQuery.value = ''
+    newProductError.value = ''
+    dialog.value = true
+  }
 }
 
-async function createNewCategory() {
-  if (newCategoryName.value.trim()) {
+function onCategoryChange(value: number | string) {
+  if (value === 'create_new') {
+    showInlineCategoryCreate.value = true
+    newProductCategoryId.value = null
+  } else {
+    showInlineCategoryCreate.value = false
+    newProductCategoryId.value = value as number
+  }
+}
+
+async function createInlineCategory() {
+  if (inlineCategoryName.value.trim()) {
     try {
-      await productsStore.createCategory(newCategoryName.value.trim())
-      newCategoryName.value = ''
-      categoryDialog.value = false
-    } catch (err: any) {
-      categoryError.value = 'Failed to create category'
+      const newCategory = await productsStore.createCategory(inlineCategoryName.value.trim())
+      inlineCategoryName.value = ''
+      inlineCategoryError.value = ''
+      showInlineCategoryCreate.value = false
+      newProductCategoryId.value = newCategory.id
+    } catch (err) {
+      inlineCategoryError.value = 'Failed to create category'
     }
   }
 }
 
 async function createNewProduct() {
   if (newProductName.value.trim() && newProductCategoryId.value) {
+    // Check if product already exists
+    const existingProduct = productsStore.products.find(
+      (product) => product.name.toLowerCase() === newProductName.value.trim().toLowerCase(),
+    )
+
+    if (existingProduct) {
+      newProductError.value = 'A product with this name already exists'
+      return
+    }
+
     const metadata: any = {}
     if (newProductUnit.value && newProductUnit.value !== 'none')
       metadata.unit = newProductUnit.value
@@ -81,6 +115,7 @@ async function createNewProduct() {
     newProductCategoryId.value = null
     newProductUnit.value = null
     newProductUnitValue.value = null
+    newProductError.value = ''
     dialog.value = false
   }
 }
@@ -117,8 +152,26 @@ async function updateProduct() {
 }
 
 function handleDeleteProduct(productId: string) {
-  if (confirm('Are you sure you want to delete this product?')) {
-    productsStore.deleteProduct(Number(productId))
+  const product = productsStore.products.find((p) => String(p.id) === productId)
+  if (product) {
+    deleteProductId.value = Number(productId)
+    deleteProductName.value = product.name
+    showDeleteDialog.value = true
+  }
+}
+
+async function confirmDeleteProduct() {
+  if (deleteProductId.value) {
+    const deletedId = deleteProductId.value
+    await productsStore.deleteProduct(deletedId)
+    showDeleteDialog.value = false
+    deleteProductId.value = null
+    deleteProductName.value = ''
+    // If we're deleting from edit dialog, close it too
+    if (editDialog.value && editingProduct.value?.id === deletedId) {
+      editDialog.value = false
+      editingProduct.value = null
+    }
   }
 }
 
@@ -137,32 +190,34 @@ function handleDeleteProduct(productId: string) {
   <NavBar />
   <div class="products-view">
     <v-container class="py-8">
-      <div class="d-flex align-center justify-space-between mb-8">
+      <div
+        class="d-flex align-center justify-space-between mb-8"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <h1 class="page-title">Products</h1>
-        <div class="d-flex buttons-row">
-          <v-btn class="add-product-btn" elevation="0" @click="handleAddCategory">
-            Add Category
-          </v-btn>
-          <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct">
-            Add Product
-          </v-btn>
-        </div>
+        <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct"> Add Product </v-btn>
       </div>
 
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
-        <v-text-field
+        <SearchDropdown
           v-model="searchQuery"
-          placeholder="Search categories or products"
-          variant="outlined"
-          density="comfortable"
-          bg-color="white"
-          rounded="lg"
-          hide-details
-          class="search-field"
+          placeholder="Search or create a product..."
+          :show-dropdown="false"
+          @enter="handleSearchEnter"
         />
+        <v-fade-transition>
+          <div v-if="searchQuery.trim()" class="search-hint mt-2">
+            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+            Press Enter to create "{{ searchQuery }}"
+          </div>
+        </v-fade-transition>
       </div>
 
-      <div v-if="filteredProducts.length > 0" class="mb-10">
+      <div
+        v-if="filteredProducts.length > 0"
+        class="mb-10"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <div class="products-grid">
           <GlobalProductCard
             v-for="product in filteredProducts"
@@ -181,15 +236,62 @@ function handleDeleteProduct(productId: string) {
 
       <!-- Dialog for adding new product -->
       <BaseDialog v-model="dialog" title="Add product">
+        <v-alert v-if="newProductError" type="error" class="mb-4" density="comfortable">
+          {{ newProductError }}
+        </v-alert>
         <BaseInput v-model="newProductName" label="Name" class="mb-4" />
-        <BaseSelect
-          v-model="newProductCategoryId"
-          :items="productsStore.categories"
-          item-title="name"
-          item-value="id"
-          label="Category"
-          class="mb-4"
-        />
+
+        <div v-if="!showInlineCategoryCreate" class="mb-4">
+          <v-select
+            :model-value="newProductCategoryId"
+            :items="[
+              ...productsStore.categories.map((c) => ({ title: c.name, value: c.id })),
+              { title: '+ Create New Category', value: 'create_new' },
+            ]"
+            item-title="title"
+            item-value="value"
+            label="Category"
+            variant="outlined"
+            density="comfortable"
+            @update:model-value="onCategoryChange"
+          />
+        </div>
+
+        <div v-else class="mb-4">
+          <v-alert v-if="inlineCategoryError" type="error" class="mb-3" density="compact">
+            {{ inlineCategoryError }}
+          </v-alert>
+          <BaseInput
+            v-model="inlineCategoryName"
+            label="Category name"
+            placeholder="Enter category name"
+            class="mb-3"
+            @keyup.enter="createInlineCategory"
+          />
+          <div class="inline-category-actions">
+            <v-btn
+              class="btn-cancel"
+              elevation="0"
+              @click="
+                () => {
+                  showInlineCategoryCreate = false
+                  inlineCategoryName = ''
+                  inlineCategoryError = ''
+                }
+              "
+            >
+              Cancel
+            </v-btn>
+            <v-btn
+              class="btn-create-category"
+              elevation="0"
+              :disabled="!inlineCategoryName.trim()"
+              @click="createInlineCategory"
+            >
+              Create
+            </v-btn>
+          </div>
+        </div>
         <div class="form-row">
           <BaseSelect
             v-model="newProductUnit"
@@ -236,15 +338,14 @@ function handleDeleteProduct(productId: string) {
           <BaseInput v-model.number="editProductUnitValue" type="number" label="Value" />
         </div>
 
-        <template #actions="{ close }">
+        <template #actions>
           <v-btn
             class="btn-remove"
             elevation="0"
             @click="
               () => {
                 if (editingProduct) {
-                  handleDeleteProduct(editingProduct.id)
-                  close()
+                  handleDeleteProduct(String(editingProduct.id))
                 }
               }
             "
@@ -262,27 +363,20 @@ function handleDeleteProduct(productId: string) {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for adding new category -->
-      <BaseDialog v-model="categoryDialog" title="Add category">
-        <v-alert v-if="categoryError" type="error" class="mb-4" density="comfortable">
-          {{ categoryError }}
-        </v-alert>
-        <BaseInput
-          v-model="newCategoryName"
-          label="Category name"
-          @keyup.enter="createNewCategory"
-        />
+      <!-- Dialog for deleting product -->
+      <BaseDialog v-model="showDeleteDialog" title="Delete Product" :max-width="450">
+        <div class="delete-confirmation">
+          <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
+          <p class="delete-message">
+            Are you sure you want to delete <strong>{{ deleteProductName }}</strong
+            >?
+          </p>
+          <p class="delete-warning">This action cannot be undone.</p>
+        </div>
 
         <template #actions="{ close }">
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
-            :disabled="!newCategoryName.trim()"
-            @click="createNewCategory"
-          >
-            Add
-          </v-btn>
+          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Delete</v-btn>
         </template>
       </BaseDialog>
     </v-container>
@@ -311,16 +405,12 @@ function handleDeleteProduct(productId: string) {
   border-radius: 6px;
 }
 
-.search-field {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.search-field :deep(.v-field) {
-  font-size: 1rem;
-}
-
-.search-field :deep(.v-field__input) {
-  padding: 1rem 1.25rem;
+.search-hint {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.5rem 0.75rem;
 }
 
 .products-grid {
@@ -339,7 +429,59 @@ function handleDeleteProduct(productId: string) {
   gap: 1rem;
 }
 
-.buttons-row {
-  gap: 12px;
+.inline-category-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.btn-create-category {
+  background-color: #000 !important;
+  color: white !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0 1.5rem !important;
+}
+
+.btn-create-category:hover {
+  background-color: #1a1a1a !important;
+}
+
+/* Delete confirmation styles */
+.delete-confirmation {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.delete-message {
+  font-size: 1rem;
+  color: #212121;
+  margin-bottom: 0.5rem;
+}
+
+.delete-message strong {
+  color: #000;
+  font-weight: 600;
+}
+
+.delete-warning {
+  font-size: 0.875rem;
+  color: #e53935;
+  margin: 0;
+}
+
+.btn-remove {
+  color: white !important;
+  background-color: #e53935 !important;
+  text-transform: none;
+  font-weight: 500;
+  padding: 0 24px !important;
+  border-radius: 8px !important;
+}
+
+.btn-remove:hover {
+  background-color: #c62828 !important;
 }
 </style>

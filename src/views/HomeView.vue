@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
-import SearchBar from '@/components/SearchBar.vue'
+import SearchDropdown from '@/components/SearchDropdown.vue'
 import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
@@ -14,25 +14,69 @@ const router = useRouter()
 
 const listsStore = useListsStore()
 const purchasesStore = usePurchasesStore()
-const { searchQuery, recurrentLists, activeLists } = storeToRefs(listsStore)
+const { recurrentLists, activeLists } = storeToRefs(listsStore)
+
+const searchQuery = ref('')
 
 const dialog = ref(false)
 const newListName = ref('')
+const newListError = ref('')
 const showPurchasesDialog = ref(false)
 const selectedListForHistory = ref<number | null>(null)
 const showShareDialog = ref(false)
 const shareEmail = ref('')
 const shareListId = ref<number | null>(null)
 const shareError = ref('')
+const showDeleteDialog = ref(false)
+const deleteListId = ref<number | null>(null)
+const deleteListName = ref('')
+
+// Computed filtered lists for search
+const filteredRecurrentLists = computed(() => {
+  if (!searchQuery.value) return recurrentLists.value
+  return recurrentLists.value.filter((list) =>
+    list.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  )
+})
+
+const filteredActiveLists = computed(() => {
+  if (!searchQuery.value) return activeLists.value
+  return activeLists.value.filter((list) =>
+    list.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  )
+})
+
+function handleSearchInput(value: string) {
+  searchQuery.value = value
+}
 
 function handleNewList() {
+  newListError.value = ''
+  dialog.value = true
+}
+
+function handleCreateFromSearch() {
+  newListName.value = searchQuery.value.trim()
+  searchQuery.value = ''
+  newListError.value = ''
   dialog.value = true
 }
 
 function createNewList() {
   if (newListName.value.trim()) {
+    // Check if list already exists
+    const existingList = listsStore.lists.find(
+      (list) => list.name.toLowerCase() === newListName.value.trim().toLowerCase(),
+    )
+
+    if (existingList) {
+      newListError.value = 'A list with this name already exists'
+      return
+    }
+
     listsStore.createList(newListName.value.trim())
     newListName.value = ''
+    newListError.value = ''
     dialog.value = false
   }
 }
@@ -49,8 +93,20 @@ async function handleToggleRecurrent(listId: string) {
 }
 
 function handleDeleteList(listId: string) {
-  if (confirm('Are you sure you want to delete this list?')) {
-    listsStore.deleteList(Number(listId))
+  const list = listsStore.lists.find((l) => l.id === Number(listId))
+  if (list) {
+    deleteListId.value = Number(listId)
+    deleteListName.value = list.name
+    showDeleteDialog.value = true
+  }
+}
+
+async function confirmDeleteList() {
+  if (deleteListId.value) {
+    await listsStore.deleteList(deleteListId.value)
+    showDeleteDialog.value = false
+    deleteListId.value = null
+    deleteListName.value = ''
   }
 }
 
@@ -116,7 +172,10 @@ onMounted(() => {
   <NavBar />
   <div class="home-container">
     <v-container class="py-8">
-      <div class="d-flex align-center justify-space-between mb-8">
+      <div
+        class="d-flex align-center justify-space-between mb-8"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <h1 class="page-title">Lists</h1>
         <v-btn class="new-list-btn" elevation="0" size="default" @click="handleNewList">
           New List
@@ -124,14 +183,30 @@ onMounted(() => {
       </div>
 
       <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
-        <SearchBar v-model="searchQuery" placeholder="Search for existing lists" />
+        <SearchDropdown
+          v-model="searchQuery"
+          placeholder="Search or create a list..."
+          :show-dropdown="false"
+          @update:model-value="handleSearchInput"
+          @enter="handleCreateFromSearch"
+        />
+        <v-fade-transition>
+          <div v-if="searchQuery.trim()" class="search-hint mt-2">
+            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+            Press Enter to create "{{ searchQuery }}"
+          </div>
+        </v-fade-transition>
       </div>
 
-      <div v-if="recurrentLists.length > 0" class="mb-10">
+      <div
+        v-if="filteredRecurrentLists.length > 0"
+        class="mb-10"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <h2 class="section-title mb-6">Recurring</h2>
         <div class="list-grid">
           <ListCard
-            v-for="list in recurrentLists"
+            v-for="list in filteredRecurrentLists"
             :key="list.id"
             :list="list"
             :is-highlighted="true"
@@ -146,11 +221,15 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="activeLists.length > 0" class="mb-10">
+      <div
+        v-if="filteredActiveLists.length > 0"
+        class="mb-10"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
         <h2 class="section-title mb-6">Active</h2>
         <div class="list-grid">
           <ListCard
-            v-for="list in activeLists"
+            v-for="list in filteredActiveLists"
             :key="list.id"
             :list="list"
             @click="handleListClick(String(list.id))"
@@ -164,13 +243,32 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="recurrentLists.length === 0 && activeLists.length === 0" class="text-center py-16">
+      <div
+        v-if="
+          filteredRecurrentLists.length === 0 && filteredActiveLists.length === 0 && !searchQuery
+        "
+        class="text-center py-16"
+      >
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-clipboard-text-outline</v-icon>
         <p class="text-h6 text-medium-emphasis">No lists found</p>
       </div>
 
+      <div
+        v-if="
+          filteredRecurrentLists.length === 0 && filteredActiveLists.length === 0 && searchQuery
+        "
+        class="text-center py-16"
+      >
+        <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-magnify</v-icon>
+        <p class="text-h6 text-medium-emphasis">No lists match your search</p>
+        <p class="text-body-2 text-medium-emphasis mb-4">Try a different search term</p>
+      </div>
+
       <!-- Dialog for creating new list -->
       <BaseDialog v-model="dialog" title="New List">
+        <v-alert v-if="newListError" type="error" class="mb-4" density="comfortable">
+          {{ newListError }}
+        </v-alert>
         <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
 
         <template #actions="{ close }">
@@ -253,6 +351,23 @@ onMounted(() => {
           </v-btn>
         </template>
       </BaseDialog>
+
+      <!-- Dialog for deleting list -->
+      <BaseDialog v-model="showDeleteDialog" title="Delete List" :max-width="450">
+        <div class="delete-confirmation">
+          <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
+          <p class="delete-message">
+            Are you sure you want to delete <strong>{{ deleteListName }}</strong
+            >?
+          </p>
+          <p class="delete-warning">This action cannot be undone.</p>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteList">Delete</v-btn>
+        </template>
+      </BaseDialog>
     </v-container>
   </div>
 </template>
@@ -279,6 +394,14 @@ onMounted(() => {
   border-radius: 6px;
 }
 
+.search-hint {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #666;
+  padding: 0.5rem 0.75rem;
+}
+
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
@@ -289,5 +412,41 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Delete confirmation styles */
+.delete-confirmation {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.delete-message {
+  font-size: 1rem;
+  color: #212121;
+  margin-bottom: 0.5rem;
+}
+
+.delete-message strong {
+  color: #000;
+  font-weight: 600;
+}
+
+.delete-warning {
+  font-size: 0.875rem;
+  color: #e53935;
+  margin: 0;
+}
+
+.btn-remove {
+  color: white !important;
+  background-color: #e53935 !important;
+  text-transform: none;
+  font-weight: 500;
+  padding: 0 24px !important;
+  border-radius: 8px !important;
+}
+
+.btn-remove:hover {
+  background-color: #c62828 !important;
 }
 </style>

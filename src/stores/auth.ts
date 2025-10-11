@@ -1,131 +1,130 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiFetch } from '@/api/client'
-import type { User } from '@/types/api'
+import { Api } from '@/api/client'
+import { UserApi, Credentials, RegistrationData, User } from '@/api/user'
 
-interface Credentials {
-  email: string
-  password: string
-}
-
-interface AuthenticationToken {
-  token: string
-}
-
-interface RegistrationData {
-  email: string
-  name: string
-  surname: string
-  password: string
-  metadata?: Record<string, unknown>
-}
+const SECURITY_TOKEN_KEY = 'auth_token'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('auth_token'))
+  const token = ref<string | null>(null)
   const user = ref<User | null>(null)
-  const isAuthenticated = computed(() => !!token.value)
 
-  function setToken(newToken: string | null) {
-    token.value = newToken
-    if (newToken) {
-      localStorage.setItem('auth_token', newToken)
-    } else {
-      localStorage.removeItem('auth_token')
-      user.value = null
-    }
+  const isAuthenticated = computed(() => {
+    return token.value != null
+  })
+
+  function initialize() {
+    const storedToken = localStorage.getItem(SECURITY_TOKEN_KEY)
+    if (storedToken) setToken(storedToken)
+  }
+
+  function setToken(value: string | null) {
+    token.value = value
+    Api.token = value
+  }
+
+  function updateToken(value: string, rememberMe: boolean = true) {
+    if (rememberMe) localStorage.setItem(SECURITY_TOKEN_KEY, value)
+    setToken(value)
+  }
+
+  function removeToken() {
+    localStorage.removeItem(SECURITY_TOKEN_KEY)
+    setToken(null)
+  }
+
+  function mapUser(data: User): User {
+    if (!data.id) return data
+    return Object.assign(new User(data.email, data.name, data.surname), data)
   }
 
   async function register(data: RegistrationData) {
-    const newUser = await apiFetch<User>('/api/users/register', {
-      method: 'POST',
-      json: data,
-    })
+    const regData = new RegistrationData(
+      data.email,
+      data.name,
+      data.surname,
+      data.password,
+      data.metadata,
+    )
+    const result = await UserApi.register(regData)
     // After registration, send verification email
     try {
       await sendVerification(data.email)
     } catch (err) {
       console.warn('Failed to send verification email:', err)
     }
-    return newUser
+    return mapUser(result)
   }
 
   async function login(credentials: Credentials) {
-    const res = await apiFetch<AuthenticationToken>('/api/users/login', {
-      method: 'POST',
-      json: credentials,
-    })
-    setToken(res.token)
+    const cred = new Credentials(credentials.email, credentials.password)
+    const result = await UserApi.login(cred)
+    updateToken(result.token, true)
     // Load user profile after login
     await fetchProfile()
   }
 
   async function logout() {
     try {
-      await apiFetch('/api/users/logout', { method: 'POST' })
+      user.value = null
+      await UserApi.logout()
     } catch {
       // ignore network/logout errors; still clear token
+    } finally {
+      removeToken()
     }
-    setToken(null)
   }
 
   async function fetchProfile() {
     if (!token.value) return
     try {
-      user.value = await apiFetch<User>('/api/users/profile', { method: 'GET' })
+      const result = await UserApi.getProfile()
+      user.value = mapUser(result)
+      return user.value
     } catch (err) {
       console.error('Failed to fetch profile:', err)
     }
   }
 
-  async function updateProfile(updates: { name?: string; surname?: string; metadata?: Record<string, unknown> }) {
-    const updated = await apiFetch<User>('/api/users/profile', {
-      method: 'PUT',
-      json: updates,
-    })
-    user.value = updated
-    return updated
+  async function updateProfile(updates: {
+    name?: string
+    surname?: string
+    metadata?: Record<string, unknown>
+  }) {
+    const result = await UserApi.updateProfile(updates)
+    user.value = mapUser(result)
+    return user.value
   }
 
   async function changePassword(currentPassword: string, newPassword: string) {
-    await apiFetch('/api/users/change-password', {
-      method: 'POST',
-      json: { currentPassword, newPassword },
-    })
+    await UserApi.changePassword(currentPassword, newPassword)
   }
 
   async function forgotPassword(email: string) {
-    await apiFetch('/api/users/forgot-password', {
-      method: 'POST',
-      query: { email },
-    })
+    await UserApi.forgotPassword(email)
   }
 
   async function sendVerification(email: string) {
-    await apiFetch('/api/users/send-verification', {
-      method: 'POST',
-      query: { email },
-    })
+    await UserApi.sendVerification(email)
   }
 
   async function verifyAccount(code: string) {
-    const verified = await apiFetch<User>('/api/users/verify-account', {
-      method: 'POST',
-      json: { code },
-    })
-    return verified
+    const result = await UserApi.verifyAccount(code)
+    return mapUser(result)
   }
 
   async function resetPassword(code: string, password: string) {
-    await apiFetch('/api/users/reset-password', {
-      method: 'POST',
-      json: { code, password },
-    })
+    await UserApi.resetPassword(code, password)
   }
+
+  // Initialize token on store creation
+  initialize()
 
   return {
     token,
     user,
     isAuthenticated,
+    initialize,
     register,
     login,
     logout,
@@ -138,6 +137,3 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
   }
 })
-
-
-

@@ -1,66 +1,173 @@
-import { useAuthStore } from '@/stores/auth'
-
 const DEFAULT_BASE_URL = 'http://localhost:8080'
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+class Api {
+  static token: string | null = null
 
-interface ApiOptions extends RequestInit {
-  method?: HttpMethod
-  query?: Record<string, unknown | undefined>
-  json?: unknown
-}
-
-function buildUrl(path: string, query?: Record<string, unknown | undefined>): string {
-  const base = (import.meta as any).env?.VITE_API_BASE_URL || DEFAULT_BASE_URL
-  const url = new URL(path.startsWith('/') ? path : `/${path}`, base)
-  if (query) {
-    Object.entries(query).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return
-      url.searchParams.set(key, String(value))
-    })
-  }
-  return url.toString()
-}
-
-export async function apiFetch<T = unknown>(path: string, options: ApiOptions = {}): Promise<T> {
-  const auth = useAuthStore()
-  const { method = 'GET', query, json, headers, ...rest } = options
-  const url = buildUrl(path, query)
-
-  const finalHeaders: HeadersInit = {
-    ...(json ? { 'Content-Type': 'application/json' } : {}),
-    ...(headers || {}),
-  }
-  if (auth.token) {
-    (finalHeaders as Record<string, string>)['Authorization'] = `Bearer ${auth.token}`
+  static get baseUrl(): string {
+    return (
+      (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ||
+      DEFAULT_BASE_URL
+    )
   }
 
-  const response = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    body: json !== undefined ? JSON.stringify(json) : undefined,
-    ...rest,
-  })
+  static get timeout(): number {
+    return 60 * 1000
+  }
 
-  if (!response.ok) {
-    let errorBody: any
-    try {
-      errorBody = await response.json()
-    } catch {
-      // ignore
+  private static buildUrl(path: string, query?: Record<string, unknown | undefined>): string {
+    const url = new URL(path.startsWith('/') ? path : `/${path}`, Api.baseUrl)
+    if (query) {
+      Object.entries(query).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return
+        url.searchParams.set(key, String(value))
+      })
     }
-    const errorMessage = errorBody?.message || `API ${method} ${path} failed: ${response.status}`
-    const error = new Error(errorMessage)
-    ;(error as any).status = response.status
-    ;(error as any).body = errorBody
-    throw error
+    return url.toString()
   }
 
-  const contentType = response.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    return (await response.json()) as T
+  static async fetch<T = unknown>(
+    url: string,
+    secure: boolean,
+    init: RequestInit = {},
+    controller?: AbortController,
+  ): Promise<T> {
+    if (secure && Api.token) {
+      if (!init.headers) {
+        init.headers = {}
+      }
+      ;(init.headers as Record<string, string>)['Authorization'] = `Bearer ${Api.token}`
+    }
+
+    controller = controller || new AbortController()
+    init.signal = controller.signal
+    const timer = setTimeout(() => controller!.abort(), Api.timeout)
+
+    try {
+      const response = await fetch(url, init)
+
+      if (!response.ok) {
+        let errorBody: { message?: string } | undefined
+        try {
+          errorBody = await response.json()
+        } catch {
+          // ignore
+        }
+        const errorMessage = errorBody?.message || `API request failed: ${response.status}`
+        const error = new Error(errorMessage) as Error & {
+          status?: number
+          body?: { message?: string }
+        }
+        error.status = response.status
+        error.body = errorBody
+        throw error
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        return (await response.json()) as T
+      }
+      return undefined as unknown as T
+    } catch (error: unknown) {
+      const err = error as Error
+      if (err.name === 'AbortError' || err.name === 'TypeError') {
+        throw { message: err.message }
+      } else {
+        throw error
+      }
+    } finally {
+      clearTimeout(timer)
+    }
   }
-  return undefined as unknown as T
+
+  static async get<T = unknown>(
+    path: string,
+    secure: boolean = true,
+    query?: Record<string, unknown | undefined>,
+    controller?: AbortController,
+  ): Promise<T> {
+    const url = Api.buildUrl(path, query)
+    return await Api.fetch<T>(url, secure, {}, controller)
+  }
+
+  static async post<T = unknown>(
+    path: string,
+    secure: boolean = true,
+    data?: unknown,
+    query?: Record<string, unknown | undefined>,
+    controller?: AbortController,
+  ): Promise<T> {
+    const url = Api.buildUrl(path, query)
+    return await Api.fetch<T>(
+      url,
+      secure,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: data !== undefined ? JSON.stringify(data) : undefined,
+      },
+      controller,
+    )
+  }
+
+  static async put<T = unknown>(
+    path: string,
+    secure: boolean = true,
+    data?: unknown,
+    controller?: AbortController,
+  ): Promise<T> {
+    const url = Api.buildUrl(path)
+    return await Api.fetch<T>(
+      url,
+      secure,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: data !== undefined ? JSON.stringify(data) : undefined,
+      },
+      controller,
+    )
+  }
+
+  static async patch<T = unknown>(
+    path: string,
+    secure: boolean = true,
+    data?: unknown,
+    controller?: AbortController,
+  ): Promise<T> {
+    const url = Api.buildUrl(path)
+    return await Api.fetch<T>(
+      url,
+      secure,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: data !== undefined ? JSON.stringify(data) : undefined,
+      },
+      controller,
+    )
+  }
+
+  static async delete<T = unknown>(
+    path: string,
+    secure: boolean = true,
+    controller?: AbortController,
+  ): Promise<T> {
+    const url = Api.buildUrl(path)
+    return await Api.fetch<T>(
+      url,
+      secure,
+      {
+        method: 'DELETE',
+      },
+      controller,
+    )
+  }
 }
 
-
+export { Api }

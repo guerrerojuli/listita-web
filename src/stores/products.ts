@@ -1,60 +1,58 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apiFetch } from '@/api/client'
-import type { ListItem } from '@/types/api'
+import { ListItemApi } from '@/api/listItem'
+import type { ListItem as ListItemType } from '@/types/api'
+
+interface ListItemWithListId extends ListItemType {
+  listId: number
+}
 
 export const useProductsStore = defineStore('products', () => {
   // State
-  const items = ref<ListItem[]>([])
+  const items = ref<ListItemWithListId[]>([])
 
   // Getters
-  function getItemsByListId(listId: number): ListItem[] {
-    return items.value.filter((i) => (i as any).listId === listId)
+  function getItemsByListId(listId: number): ListItemWithListId[] {
+    return items.value.filter((i) => i.listId === listId)
+  }
+
+  function mapListItem(data: unknown, listId: number): ListItemWithListId {
+    // Return data as-is from API with listId added
+    return { ...(data as ListItemType), listId }
   }
 
   // Actions
   async function loadListItems(listId: number, params?: Record<string, unknown>) {
-    const data = await apiFetch<{ data: ListItem[] }>(`/api/shopping-lists/${listId}/items`, {
-      method: 'GET',
-      query: params,
-    })
+    const result = await ListItemApi.getAll(listId, undefined, params)
     // Tag items with listId for local filtering convenience
-    const listItems = data.data || []
-    items.value = listItems.map((d) => Object.assign({}, d, { listId })) as any
+    items.value = result.data.map((item) => mapListItem(item, listId))
   }
 
   async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
-    const response = await apiFetch<any>(`/api/shopping-lists/${listId}/items`, {
-      method: 'POST',
-      json: { product: { id: productId }, quantity, unit },
-    })
+    const response = await ListItemApi.add(listId, productId, quantity, unit)
     // Handle both response formats: direct item or { item: ... }
-    const created = response.item || response
-    items.value.unshift(Object.assign({}, created, { listId }) as any)
+    const created = (response as { item?: unknown }).item || response
+    items.value.unshift(mapListItem(created, listId))
   }
 
   async function deleteItem(listId: number, itemId: number) {
-    await apiFetch(`/api/shopping-lists/${listId}/items/${itemId}`, { method: 'DELETE' })
+    await ListItemApi.remove(listId, itemId)
     const index = items.value.findIndex((i) => i.id === itemId)
     if (index !== -1) items.value.splice(index, 1)
   }
 
   async function setPurchased(listId: number, itemId: number, purchased: boolean) {
-    const updated = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items/${itemId}`, {
-      method: 'PATCH',
-      json: { purchased },
-    })
+    const result = await ListItemApi.setPurchased(listId, itemId, purchased)
+    const updated = mapListItem(result, listId)
     const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = Object.assign({}, updated, { listId }) as any
+    if (idx !== -1) items.value[idx] = updated
   }
 
   async function updateQuantity(listId: number, itemId: number, quantity: number, unit?: string) {
-    const updated = await apiFetch<ListItem>(`/api/shopping-lists/${listId}/items/${itemId}`, {
-      method: 'PUT',
-      json: { quantity, ...(unit ? { unit } : {}) },
-    })
+    const result = await ListItemApi.updateQuantity(listId, itemId, quantity, unit)
+    const updated = mapListItem(result, listId)
     const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = Object.assign({}, updated, { listId }) as any
+    if (idx !== -1) items.value[idx] = updated
   }
 
   function incrementQuantity(listId: number, itemId: number) {
