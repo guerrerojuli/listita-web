@@ -24,18 +24,18 @@ const editProductCategoryId = ref<number | null>(null)
 const editProductUnit = ref<string | null>(null)
 const editProductUnitValue = ref<number | null>(null)
 const unitOptions = [
-  { title: 'Sin medida', value: 'none' },
-  { title: 'Unidad', value: 'unit' },
-  { title: 'Litros', value: 'liters' },
-  { title: 'Mililitros', value: 'milliliters' },
-  { title: 'Kilos', value: 'kilograms' },
-  { title: 'Gramos', value: 'grams' },
-  { title: 'Volumen', value: 'volume' },
+  { title: 'No unit', value: 'none' },
+  { title: 'Unit', value: 'unit' },
+  { title: 'Liters', value: 'liters' },
+  { title: 'Milliliters', value: 'milliliters' },
+  { title: 'Kilograms', value: 'kilograms' },
+  { title: 'Grams', value: 'grams' },
+  { title: 'Volume', value: 'volume' },
   { title: 'Pack', value: 'pack' },
-  { title: 'Libras', value: 'pounds' },
-  { title: 'Onzas', value: 'ounces' },
-  { title: 'Centímetros', value: 'centimeters' },
-  { title: 'Metros', value: 'meters' },
+  { title: 'Pounds', value: 'pounds' },
+  { title: 'Ounces', value: 'ounces' },
+  { title: 'Centimeters', value: 'centimeters' },
+  { title: 'Meters', value: 'meters' },
 ]
 
 const categoryDialog = ref(false)
