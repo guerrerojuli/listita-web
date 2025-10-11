@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import BaseDialog from '@/components/BaseDialog.vue'
+import BaseInput from '@/components/BaseInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -152,19 +153,8 @@ async function handleChangePassword() {
     <v-alert v-if="profileSuccess" type="success" class="mb-4" density="comfortable">
       {{ profileSuccess }}
     </v-alert>
-    <v-text-field
-      v-model="editName"
-      label="First Name"
-      variant="outlined"
-      density="comfortable"
-      class="mb-4"
-    />
-    <v-text-field
-      v-model="editSurname"
-      label="Last Name"
-      variant="outlined"
-      density="comfortable"
-    />
+    <BaseInput v-model="editName" label="First Name" class="mb-4" />
+    <BaseInput v-model="editSurname" label="Last Name" />
 
     <template #actions="{ close }">
       <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
@@ -180,31 +170,16 @@ async function handleChangePassword() {
     <v-alert v-if="passwordSuccess" type="success" class="mb-4" density="comfortable">
       {{ passwordSuccess }}
     </v-alert>
-    <v-text-field
-      v-model="currentPassword"
-      label="Current Password"
-      type="password"
-      variant="outlined"
-      density="comfortable"
-      class="mb-4"
-    />
-    <v-text-field
+    <BaseInput v-model="currentPassword" label="Current Password" type="password" class="mb-4" />
+    <BaseInput
       v-model="newPassword"
       label="New Password"
       type="password"
-      variant="outlined"
-      density="comfortable"
-      class="mb-4"
       hint="Minimum 6 characters"
       persistent-hint
+      class="mb-4"
     />
-    <v-text-field
-      v-model="confirmPassword"
-      label="Confirm New Password"
-      type="password"
-      variant="outlined"
-      density="comfortable"
-    />
+    <BaseInput v-model="confirmPassword" label="Confirm New Password" type="password" />
 
     <template #actions="{ close }">
       <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>

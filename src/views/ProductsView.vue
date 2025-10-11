@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 
@@ -179,42 +181,24 @@ function handleDeleteProduct(productId: string) {
 
       <!-- Dialog for adding new product -->
       <BaseDialog v-model="dialog" title="Add product">
-        <v-text-field
-          v-model="newProductName"
-          label="Name"
-          variant="outlined"
-          density="comfortable"
-          class="mb-4"
-        />
-        <v-select
+        <BaseInput v-model="newProductName" label="Name" class="mb-4" />
+        <BaseSelect
           v-model="newProductCategoryId"
           :items="productsStore.categories"
           item-title="name"
           item-value="id"
           label="Category"
-          variant="outlined"
-          density="comfortable"
           class="mb-4"
         />
         <div class="form-row">
-          <v-select
+          <BaseSelect
             v-model="newProductUnit"
             :items="unitOptions"
             item-title="title"
             item-value="value"
             label="Unit"
-            variant="outlined"
-            density="comfortable"
           />
-          <v-text-field
-            v-model.number="newProductUnitValue"
-            type="number"
-            min="0"
-            step="any"
-            label="Value"
-            variant="outlined"
-            density="comfortable"
-          />
+          <BaseInput v-model.number="newProductUnitValue" type="number" label="Value" />
         </div>
 
         <template #actions="{ close }">
@@ -232,42 +216,24 @@ function handleDeleteProduct(productId: string) {
 
       <!-- Dialog for editing product -->
       <BaseDialog v-model="editDialog" title="Edit product">
-        <v-text-field
-          v-model="editProductName"
-          label="Name"
-          variant="outlined"
-          density="comfortable"
-          class="mb-4"
-        />
-        <v-select
+        <BaseInput v-model="editProductName" label="Name" class="mb-4" />
+        <BaseSelect
           v-model="editProductCategoryId"
           :items="productsStore.categories"
           item-title="name"
           item-value="id"
           label="Category"
-          variant="outlined"
-          density="comfortable"
           class="mb-4"
         />
         <div class="form-row">
-          <v-select
+          <BaseSelect
             v-model="editProductUnit"
             :items="unitOptions"
             item-title="title"
             item-value="value"
             label="Unit"
-            variant="outlined"
-            density="comfortable"
           />
-          <v-text-field
-            v-model.number="editProductUnitValue"
-            type="number"
-            min="0"
-            step="any"
-            label="Value"
-            variant="outlined"
-            density="comfortable"
-          />
+          <BaseInput v-model.number="editProductUnitValue" type="number" label="Value" />
         </div>
 
         <template #actions="{ close }">
@@ -301,11 +267,9 @@ function handleDeleteProduct(productId: string) {
         <v-alert v-if="categoryError" type="error" class="mb-4" density="comfortable">
           {{ categoryError }}
         </v-alert>
-        <v-text-field
+        <BaseInput
           v-model="newCategoryName"
           label="Category name"
-          variant="outlined"
-          density="comfortable"
           @keyup.enter="createNewCategory"
         />
 

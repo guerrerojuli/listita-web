@@ -6,6 +6,7 @@ import NavBar from '@/components/NavBar.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
+import BaseInput from '@/components/BaseInput.vue'
 import { useListsStore } from '@/stores/lists'
 import { usePurchasesStore } from '@/stores/purchases'
 
@@ -170,14 +171,7 @@ onMounted(() => {
 
       <!-- Dialog for creating new list -->
       <BaseDialog v-model="dialog" title="New List">
-        <v-text-field
-          v-model="newListName"
-          label="List name"
-          variant="outlined"
-          density="comfortable"
-          autofocus
-          @keyup.enter="createNewList"
-        />
+        <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
 
         <template #actions="{ close }">
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
@@ -238,12 +232,10 @@ onMounted(() => {
         <v-alert v-if="shareError" type="error" class="mb-4" density="comfortable">
           {{ shareError }}
         </v-alert>
-        <v-text-field
+        <BaseInput
           v-model="shareEmail"
           label="Email address"
           type="email"
-          variant="outlined"
-          density="comfortable"
           placeholder="Enter email to share with"
           autofocus
           @keyup.enter="submitShareList"
