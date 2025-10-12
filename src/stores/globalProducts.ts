@@ -91,6 +91,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     const result = await ProductApi.add(product)
     const created = mapProduct(result as unknown as ProductType)
     products.value.unshift(created)
+    return created
   }
 
   async function deleteProduct(id: number) {

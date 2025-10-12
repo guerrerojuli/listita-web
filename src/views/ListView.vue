@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
@@ -36,6 +38,27 @@ const searchQuery = ref('')
 const isLoading = ref(false)
 const isSearching = ref(false)
 
+// Add-to-list dialog state
+const showAddToListDialog = ref(false)
+const pendingProductToAdd = ref<Product | null>(null)
+const pendingUnit = ref<string | null>(null)
+const pendingUnitAmount = ref<number | null>(null)
+const addToListError = ref('')
+
+const unitOptions = [
+  { title: 'Unit', value: 'unit' },
+  { title: 'Liters', value: 'liters' },
+  { title: 'Milliliters', value: 'milliliters' },
+  { title: 'Kilograms', value: 'kilograms' },
+  { title: 'Grams', value: 'grams' },
+  { title: 'Volume', value: 'volume' },
+  { title: 'Pack', value: 'pack' },
+  { title: 'Pounds', value: 'pounds' },
+  { title: 'Ounces', value: 'ounces' },
+  { title: 'Centimeters', value: 'centimeters' },
+  { title: 'Meters', value: 'meters' },
+]
+
 const showDeleteDialog = ref(false)
 const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
@@ -48,14 +71,12 @@ const filteredListItems = computed(() => {
   )
 })
 
-// Get available products to add (excluding ones already in list)
+// Get available products to add (allow products already in list; duplicate check happens later)
 const availableProducts = computed(() => {
   if (!searchQuery.value) return []
-  const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
   return (globalProductsStore.products || []).filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const notInList = !itemProductIds.has(p.id)
-    return matchesSearch && notInList
+    return Boolean(matchesSearch)
   })
 })
 
@@ -75,9 +96,7 @@ async function handleSearchEnter() {
   // If there's a matching product, add the first one
   if (availableProducts.value.length > 0) {
     const product = availableProducts.value[0]
-    if (product) {
-      await handleAddProduct(product)
-    }
+    if (product) await handleAddProduct(product)
   } else {
     // No products found, clear search and navigate to create one
     searchQuery.value = ''
@@ -86,23 +105,64 @@ async function handleSearchEnter() {
 }
 
 async function handleAddProduct(product: Product) {
-  try {
-    // Check if product is already in the list
-    const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
+  // We now allow same product name if Unit/Value differ; check later on confirm
+  addToListError.value = ''
+  pendingProductToAdd.value = product
+  // Prefill from product metadata if any
+  pendingUnit.value = (product.metadata as any)?.unit ?? null
+  pendingUnitAmount.value = (product.metadata as any)?.unitValue ?? null
+  showAddToListDialog.value = true
+}
 
-    if (isAlreadyInList) {
-      alert(`"${product.name}" is already in this list`)
-      searchQuery.value = ''
+async function confirmAddToList() {
+  if (!pendingProductToAdd.value) return
+  try {
+    // Prevent duplicates ONLY if name, category, unit and value are identical
+    const duplicateExists = (items.value || []).some((i) => {
+      const sameName = (i.product?.name || '').toLowerCase() === pendingProductToAdd.value!.name.toLowerCase()
+      const sameCategory = (i.product?.category?.id ?? null) === (pendingProductToAdd.value!.category?.id ?? null)
+      const sameUnit = (i.unit || 'unit') === (pendingUnit.value || 'unit')
+      const existingValueRaw = (i.metadata as any)?.unitValue
+      const existingValue = existingValueRaw === undefined || existingValueRaw === null ? undefined : Number(existingValueRaw)
+    const desiredAmount = pendingUnitAmount.value === null || Number.isNaN(pendingUnitAmount.value as any)
+      ? undefined
+      : Number(pendingUnitAmount.value)
+      const sameValue = desiredAmount === undefined ? existingValue === undefined : existingValue === desiredAmount
+      return sameName && sameCategory && sameUnit && sameValue
+    })
+    if (duplicateExists) {
+      addToListError.value = 'This product with the same unit and value is already in the list'
       return
     }
 
-    const defaultUnit = (product.metadata as any)?.unit || 'unit'
-    await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
+    // Determine desired unit/amount
+    const desiredUnit = pendingUnit.value || 'unit'
+    const desiredAmount =
+      pendingUnitAmount.value !== null && !Number.isNaN(pendingUnitAmount.value)
+        ? Number(pendingUnitAmount.value)
+        : undefined
+
+    // Source of truth is the product without unit/value; we only vary unit/value at item level
+    // Add item with chosen unit and value as item metadata
+    await productsStore.addItem(
+      listId.value,
+      pendingProductToAdd.value.id,
+      desiredAmount !== undefined ? desiredAmount : 1,
+      desiredUnit,
+      desiredAmount !== undefined
+        ? { unit: desiredUnit, unitValue: desiredAmount }
+        : { unit: desiredUnit },
+    )
+
+    // Cleanup
+    showAddToListDialog.value = false
     searchQuery.value = ''
+    pendingProductToAdd.value = null
+    pendingUnit.value = null
+    pendingUnitAmount.value = null
   } catch (err: any) {
     console.error('Failed to add product:', err)
-    const errorMessage = err.message || 'Failed to add product to list'
-    alert(`Failed to add product: ${errorMessage}`)
+    addToListError.value = err.message || 'Failed to add product to list'
   }
 }
 
@@ -120,6 +180,10 @@ function handleIncrement(itemId: number) {
 
 function handleDecrement(itemId: number) {
   productsStore.decrementQuantity(listId.value, itemId)
+}
+
+function handleUpdateQuantity(itemId: number, quantity: number) {
+  productsStore.updateQuantity(listId.value, itemId, quantity)
 }
 
 function handleDeleteProduct(itemId: number) {
@@ -316,6 +380,7 @@ onMounted(async () => {
             @toggle-complete="handleToggleComplete(item.id)"
             @increment="handleIncrement(item.id)"
             @decrement="handleDecrement(item.id)"
+            @update-quantity="(qty) => handleUpdateQuantity(item.id, qty)"
             @delete="handleDeleteProduct(item.id)"
             @edit="handleEditProduct()"
           />
@@ -344,6 +409,34 @@ onMounted(async () => {
         <template #actions="{ close }">
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Remove</v-btn>
+        </template>
+      </BaseDialog>
+
+      <!-- Dialog for selecting Unit/Value when adding product to list -->
+      <BaseDialog v-model="showAddToListDialog" title="Add product to list" :max-width="520">
+        <v-alert v-if="addToListError" type="error" class="mb-4" density="comfortable">
+          {{ addToListError }}
+        </v-alert>
+        <div class="form-row">
+          <BaseSelect
+            v-model="pendingUnit"
+            :items="unitOptions"
+            item-title="title"
+            item-value="value"
+            label="Unit"
+          />
+          <BaseInput v-model.number="pendingUnitAmount" type="number" label="Amount" />
+        </div>
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!pendingUnit"
+            @click="confirmAddToList"
+          >
+            Add
+          </v-btn>
         </template>
       </BaseDialog>
     </v-container>

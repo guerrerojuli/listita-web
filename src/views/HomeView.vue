@@ -21,6 +21,7 @@ const searchQuery = ref('')
 const dialog = ref(false)
 const newListName = ref('')
 const newListError = ref('')
+const openedFromSearch = ref(false)
 const showPurchasesDialog = ref(false)
 const selectedListForHistory = ref<number | null>(null)
 const showShareDialog = ref(false)
@@ -57,9 +58,21 @@ function handleNewList() {
 
 function handleCreateFromSearch() {
   newListName.value = searchQuery.value.trim()
-  searchQuery.value = ''
   newListError.value = ''
+  openedFromSearch.value = true
   dialog.value = true
+}
+
+function onNewListDialogUpdate(val: boolean) {
+  if (val === false) {
+    if (openedFromSearch.value) {
+      // clear al search cuando se hace cancel o close para que no vuelva a aparecer en el New List
+      searchQuery.value = ''
+      newListName.value = ''
+      newListError.value = ''
+      openedFromSearch.value = false
+    }
+  }
 }
 
 function createNewList() {
@@ -265,7 +278,7 @@ onMounted(() => {
       </div>
 
       <!-- Dialog for creating new list -->
-      <BaseDialog v-model="dialog" title="New List">
+      <BaseDialog v-model="dialog" title="New List" @update:model-value="onNewListDialogUpdate">
         <v-alert v-if="newListError" type="error" class="mb-4" density="comfortable">
           {{ newListError }}
         </v-alert>

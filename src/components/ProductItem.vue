@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { toUnitAbbreviation, formatProductName } from '@/utils/units'
 import ProductMetaChips from '@/components/ProductMetaChips.vue'
 import type { ListItem } from '@/types/api'
@@ -12,14 +12,16 @@ interface Emits {
   (e: 'toggle-complete'): void
   (e: 'increment'): void
   (e: 'decrement'): void
+  (e: 'update-quantity', quantity: number): void
   (e: 'delete'): void
   (e: 'edit'): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const showMenu = ref(false)
+const editableQuantity = ref(0)
 
 function shortUnit(unit?: string) {
   return unit ? (toUnitAbbreviation(unit) ?? unit) : ''
@@ -29,6 +31,47 @@ function displayQuantity(q?: number) {
   if (typeof q !== 'number' || Number.isNaN(q)) return 0
   return Math.trunc(q)
 }
+
+function updateQuantity() {
+  const newQty = Number(editableQuantity.value)
+  if (!Number.isNaN(newQty) && newQty >= 0) {
+    // Round to 2 decimal places max
+    const roundedQty = Math.round(newQty * 100) / 100
+    editableQuantity.value = roundedQty
+    emit('update-quantity', roundedQty)
+  } else {
+    editableQuantity.value = props.item.quantity
+  }
+}
+
+function formatQuantity(qty: number): number {
+  return Math.round(qty * 100) / 100
+}
+
+function handleInputChange() {
+  // Format the input in real-time to prevent excessive decimals
+  const formatted = formatQuantity(Number(editableQuantity.value))
+  if (formatted !== editableQuantity.value) {
+    editableQuantity.value = formatted
+  }
+}
+
+function handleIncrement() {
+  const newQty = formatQuantity(Number(editableQuantity.value) + 1)
+  editableQuantity.value = newQty
+  emit('update-quantity', newQty)
+}
+
+function handleDecrement() {
+  const newQty = formatQuantity(Math.max(0, Number(editableQuantity.value) - 1))
+  editableQuantity.value = newQty
+  emit('update-quantity', newQty)
+}
+
+// Initialize editable quantity when component mounts or item changes
+watch(() => props.item.quantity, (newQty) => {
+  editableQuantity.value = formatQuantity(newQty)
+}, { immediate: true })
 </script>
 
 <template>
@@ -48,59 +91,80 @@ function displayQuantity(q?: number) {
       </span>
     </div>
 
-    <div class="product-tags" v-if="item.product">
-      <ProductMetaChips :product="item.product" />
-    </div>
+    <div class="product-right">
+        <div class="product-tags" v-if="item.product">
+          <ProductMetaChips
+            :product="item.product"
+            chip-size="default"
+            :unit-override="null"
+            :unit-value-override="null"
+          />
+        </div>
 
-    <div class="product-actions">
-      <v-btn
-        icon="mdi-minus"
-        variant="text"
-        size="small"
-        :disabled="item.purchased || item.quantity <= 1"
-        @click="!item.purchased && emit('decrement')"
-      />
-      <span class="product-quantity">{{ displayQuantity(item.quantity) }}</span>
-      <v-btn
-        icon="mdi-plus"
-        variant="text"
-        size="small"
-        :disabled="item.purchased"
-        @click="!item.purchased && emit('increment')"
-      />
+      <div class="product-actions">
+        <v-btn
+          icon="mdi-minus"
+          variant="text"
+          size="small"
+          :disabled="item.purchased || editableQuantity <= 1"
+          @click="!item.purchased && handleDecrement()"
+        />
+        <v-text-field
+          v-model.number="editableQuantity"
+          type="number"
+          step="0.01"
+          min="0"
+          density="compact"
+          variant="outlined"
+          hide-details
+          :disabled="item.purchased"
+          :suffix="shortUnit(item.unit)"
+          class="quantity-input"
+          @blur="updateQuantity"
+          @keyup.enter="updateQuantity"
+          @input="handleInputChange"
+        />
+        <v-btn
+          icon="mdi-plus"
+          variant="text"
+          size="small"
+          :disabled="item.purchased"
+          @click="!item.purchased && handleIncrement()"
+        />
 
-      <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">
-        <template v-slot:activator="{ props: menuProps }">
-          <v-btn icon="mdi-dots-vertical" variant="text" size="small" v-bind="menuProps" />
-        </template>
+        <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">
+          <template v-slot:activator="{ props: menuProps }">
+            <v-btn icon="mdi-dots-vertical" variant="text" size="small" v-bind="menuProps" />
+          </template>
 
-        <v-card min-width="200" class="menu-card" elevation="0">
-          <v-list class="menu-list">
-            <v-list-item @click="emit('edit')" class="menu-item" rounded="lg">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
-              </template>
-              <v-list-item-title class="menu-text">Edit</v-list-item-title>
-            </v-list-item>
+          <v-card min-width="200" class="menu-card" elevation="0">
+            <v-list class="menu-list">
+              <v-list-item @click="emit('edit')" class="menu-item" rounded="lg">
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
+                </template>
+                <v-list-item-title class="menu-text">Edit</v-list-item-title>
+              </v-list-item>
 
-            <v-list-item
-              @click="
-                () => {
-                  emit('delete')
-                  showMenu = false
-                }
-              "
-              class="menu-item menu-item-danger"
-              rounded="lg"
-            >
-              <template v-slot:prepend>
-                <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
-              </template>
-              <v-list-item-title class="menu-text">Delete</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-card>
-      </v-menu>
+              <v-list-item
+                @click="
+                  () => {
+                    emit('delete')
+                    showMenu = false
+                  }
+                "
+                class="menu-item menu-item-danger"
+                rounded="lg"
+              >
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
+                </template>
+                <v-list-item-title class="menu-text">Delete</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </v-menu>
+      </div>
     </div>
   </div>
 </template>
@@ -147,14 +211,16 @@ function displayQuantity(q?: number) {
   color: #212121;
 }
 
-.product-tags {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+.product-right {
   display: flex;
-  gap: 0.5rem;
-  pointer-events: none; /* non-interactive display */
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.product-tags {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .product-completed .product-name {
@@ -167,6 +233,27 @@ function displayQuantity(q?: number) {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+.quantity-input {
+  width: 120px;
+}
+
+.quantity-input :deep(.v-field__input) {
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Hide number input arrows */
+.quantity-input :deep(input[type='number']::-webkit-outer-spin-button),
+.quantity-input :deep(input[type='number']::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-input :deep(input[type='number']) {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .product-quantity {

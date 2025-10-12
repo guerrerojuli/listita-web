@@ -12,12 +12,13 @@ class ListItemApi {
     productId: number,
     quantity: number = 1,
     unit: string = 'unit',
+    metadata?: Record<string, unknown>,
     controller?: AbortController,
   ): Promise<ListItem | { item: ListItem }> {
     return await Api.post<ListItem | { item: ListItem }>(
       ListItemApi.getUrl(listId),
       true,
-      { product: { id: productId }, quantity, unit },
+      { product: { id: productId }, quantity, unit, ...(metadata ? { metadata } : {}) },
       undefined,
       controller,
     )

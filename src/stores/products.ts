@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ListItemApi } from '@/api/listItem'
-import type { ListItem as ListItemType } from '@/types/api'
+import { useGlobalProductsStore } from '@/stores/globalProducts'
+import type { ListItem as ListItemType, Product as ProductType, Category as CategoryType } from '@/types/api'
 
 interface ListItemWithListId extends ListItemType {
   listId: number
@@ -17,8 +18,27 @@ export const useProductsStore = defineStore('products', () => {
   }
 
   function mapListItem(data: unknown, listId: number): ListItemWithListId {
-    // Return data as-is from API with listId added
-    return { ...(data as ListItemType), listId }
+    const item = data as ListItemType
+    const globalProductsStore = useGlobalProductsStore()
+
+    let enrichedProduct: ProductType = item.product
+
+    // If we have this product in the global store, use the full object
+    const fullProduct = globalProductsStore.products.find((p) => p.id === enrichedProduct?.id)
+    if (fullProduct) {
+      enrichedProduct = fullProduct
+    } else if (enrichedProduct?.category?.id) {
+      // Otherwise, at least enrich the category by id
+      const categoryId = enrichedProduct.category.id
+      const fullCategory: CategoryType | undefined = globalProductsStore.categories.find(
+        (c) => c.id === categoryId,
+      )
+      if (fullCategory) {
+        enrichedProduct = { ...enrichedProduct, category: fullCategory }
+      }
+    }
+
+    return { ...item, product: enrichedProduct, listId }
   }
 
   // Actions
@@ -28,8 +48,14 @@ export const useProductsStore = defineStore('products', () => {
     items.value = result.data.map((item) => mapListItem(item, listId))
   }
 
-  async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
-    const response = await ListItemApi.add(listId, productId, quantity, unit)
+  async function addItem(
+    listId: number,
+    productId: number,
+    quantity = 1,
+    unit = 'unit',
+    metadata?: Record<string, unknown>,
+  ) {
+    const response = await ListItemApi.add(listId, productId, quantity, unit, metadata)
     // Handle both response formats: direct item or { item: ... }
     const created = (response as { item?: unknown }).item || response
     items.value.unshift(mapListItem(created, listId))

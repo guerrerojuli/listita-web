@@ -27,12 +27,11 @@ const unitLabel = computed(() => {
   <div class="product-card">
     <div class="product-main-info">
       <h3 class="product-name">{{ product.name }}</h3>
-      <!-- Price not provided by API spec; keep name/category -->
     </div>
 
-    <ProductMetaChips :product="product" />
-
-    <div class="product-actions">
+    <div class="product-right">
+      <ProductMetaChips :product="product" chip-size="default" />
+      <div class="product-actions">
       <v-btn icon="mdi-pencil-outline" variant="text" size="small" @click.stop="emit('edit')" />
       <v-btn
         icon="mdi-delete-outline"
@@ -43,13 +42,14 @@ const unitLabel = computed(() => {
       />
     </div>
   </div>
+  </div>
 </template>
 
 <style scoped>
 .product-card {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
   padding: 1.5rem;
   background: white;
   border: 1px solid #e0e0e0;
@@ -66,8 +66,9 @@ const unitLabel = computed(() => {
 .product-main-info {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  min-width: 400px;
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .product-name {
@@ -75,7 +76,7 @@ const unitLabel = computed(() => {
   font-weight: 600;
   color: #000;
   margin: 0;
-  min-width: 200px;
+  min-width: 0;
 }
 
 .product-price {
@@ -97,9 +98,16 @@ const unitLabel = computed(() => {
   font-weight: 500;
 }
 
+.product-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
 .product-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   flex-shrink: 0;
 }
 </style>
