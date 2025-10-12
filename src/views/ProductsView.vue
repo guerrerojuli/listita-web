@@ -22,8 +22,6 @@ const editDialog = ref(false)
 const newProductName = ref('')
 const newProductWarning = ref('')
 const newProductCategoryId = ref<number | null>(null)
-const newProductUnit = ref<string | null>(null)
-const newProductUnitValue = ref<number | null>(null)
 
 const editingProduct = ref<any>(null)
 const editProductName = ref('')
@@ -104,21 +102,14 @@ async function createNewProduct() {
       return
     }
 
-    const metadata: any = {}
-    if (newProductUnit.value && newProductUnit.value !== 'none')
-      metadata.unit = newProductUnit.value
-    if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value))
-      metadata.unitValue = newProductUnitValue.value
     await productsStore.addProduct(
       newProductName.value.trim(),
       newProductCategoryId.value,
       undefined,
-      metadata,
+      {},
     )
     newProductName.value = ''
     newProductCategoryId.value = null
-    newProductUnit.value = null
-    newProductUnitValue.value = null
     newProductWarning.value = ''
     dialog.value = false
   }
@@ -272,7 +263,7 @@ watch(
       <BaseDialog v-model="dialog" title="Add product">
         <BaseInput v-model="newProductName" label="Name" class="mb-4" />
 
-        <div v-if="!showInlineCategoryCreate" class="mb-4">
+        <div v-if="!showInlineCategoryCreate">
           <v-select
             :model-value="newProductCategoryId"
             :items="[
@@ -326,16 +317,6 @@ watch(
               Create
             </v-btn>
           </div>
-        </div>
-        <div class="form-row">
-          <BaseSelect
-            v-model="newProductUnit"
-            :items="unitOptions"
-            item-title="title"
-            item-value="value"
-            label="Unit"
-          />
-          <BaseInput v-model.number="newProductUnitValue" type="number" label="Value" />
         </div>
 
         <template #actions="{ close }">

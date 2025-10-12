@@ -54,12 +54,15 @@ const productSearchQuery = ref('')
 const showCreateProductInDialog = ref(false)
 const newProductName = ref('')
 const newProductCategoryId = ref<number | null>(null)
-const newProductUnit = ref<string | null>(null)
-const newProductUnitValue = ref<number | null>(null)
 const showInlineCategoryCreate = ref(false)
 const inlineCategoryName = ref('')
 const inlineCategoryError = ref('')
 const dialogLoadMoreTrigger = ref<HTMLElement | null>(null)
+
+const showUnitQuantityDialog = ref(false)
+const selectedProductToAdd = ref<Product | null>(null)
+const addQuantity = ref(1)
+const addUnit = ref<string>('unit')
 
 const unitOptions = [
   { title: 'No unit', value: 'none' },
@@ -130,23 +133,19 @@ async function handleSearchEnter() {
 }
 
 async function handleAddProduct(product: Product) {
-  try {
-    const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
+  const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
 
-    if (isAlreadyInList) {
-      showWarning(`"${product.name}" is already in this list`)
-      searchQuery.value = ''
-      return
-    }
-
-    const defaultUnit = (product.metadata as any)?.unit || 'unit'
-    await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
+  if (isAlreadyInList) {
+    showWarning(`"${product.name}" is already in this list`)
     searchQuery.value = ''
-  } catch (err: any) {
-    console.error('Failed to add product:', err)
-    const errorMessage = err.message || 'Failed to add product to list'
-    alert(`Failed to add product: ${errorMessage}`)
+    return
   }
+
+  selectedProductToAdd.value = product
+  addQuantity.value = 1
+  addUnit.value = (product.metadata as any)?.unit || 'unit'
+  showUnitQuantityDialog.value = true
+  searchQuery.value = ''
 }
 
 function handleToggleComplete(itemId: number) {
@@ -227,16 +226,31 @@ function handleShareList() {
   }
 }
 
-async function handleAddProductFromDialog(product: Product) {
-  try {
-    const defaultUnit = (product.metadata as any)?.unit || 'unit'
-    await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
-    showAddProductDialog.value = false
-    productSearchQuery.value = ''
-  } catch (err: any) {
-    console.error('Failed to add product:', err)
-    const errorMessage = err.message || 'Failed to add product to list'
-    alert(`Failed to add product: ${errorMessage}`)
+function handleAddProductFromDialog(product: Product) {
+  selectedProductToAdd.value = product
+  addQuantity.value = 1
+  addUnit.value = (product.metadata as any)?.unit || 'unit'
+  showAddProductDialog.value = false
+  showUnitQuantityDialog.value = true
+}
+
+async function confirmAddProduct() {
+  if (selectedProductToAdd.value) {
+    try {
+      await productsStore.addItem(
+        listId.value,
+        selectedProductToAdd.value.id,
+        addQuantity.value,
+        addUnit.value,
+      )
+      showUnitQuantityDialog.value = false
+      selectedProductToAdd.value = null
+      productSearchQuery.value = ''
+    } catch (err: any) {
+      console.error('Failed to add product:', err)
+      const errorMessage = err.message || 'Failed to add product to list'
+      alert(`Failed to add product: ${errorMessage}`)
+    }
   }
 }
 
@@ -272,31 +286,23 @@ async function createInlineCategory() {
 async function createAndAddProduct() {
   if (newProductName.value.trim() && newProductCategoryId.value) {
     try {
-      const metadata: any = {}
-      if (newProductUnit.value && newProductUnit.value !== 'none')
-        metadata.unit = newProductUnit.value
-      if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value))
-        metadata.unitValue = newProductUnitValue.value
-
       await globalProductsStore.addProduct(
         newProductName.value.trim(),
         newProductCategoryId.value,
         undefined,
-        metadata,
+        {},
       )
 
       const newProduct = globalProductsStore.products[0]
       if (newProduct) {
-        await handleAddProductFromDialog(newProduct)
+        selectedProductToAdd.value = newProduct
+        showCreateProductInDialog.value = false
+        showAddProductDialog.value = false
+        showUnitQuantityDialog.value = true
       }
 
       newProductName.value = ''
       newProductCategoryId.value = null
-      newProductUnit.value = null
-      newProductUnitValue.value = null
-      showCreateProductInDialog.value = false
-      showAddProductDialog.value = false
-      productSearchQuery.value = ''
     } catch (err: any) {
       console.error('Failed to create product:', err)
       alert('Failed to create product')
@@ -310,8 +316,6 @@ function closeAddProductDialog() {
   productSearchQuery.value = ''
   newProductName.value = ''
   newProductCategoryId.value = null
-  newProductUnit.value = null
-  newProductUnitValue.value = null
   showInlineCategoryCreate.value = false
   inlineCategoryName.value = ''
   inlineCategoryError.value = ''
@@ -618,17 +622,6 @@ onMounted(async () => {
               </v-btn>
             </div>
           </div>
-
-          <div class="form-row">
-            <BaseSelect
-              v-model="newProductUnit"
-              :items="unitOptions"
-              item-title="title"
-              item-value="value"
-              label="Unit"
-            />
-            <BaseInput v-model.number="newProductUnitValue" type="number" label="Value" />
-          </div>
         </div>
 
         <template #actions="{ close }">
@@ -656,6 +649,37 @@ onMounted(async () => {
             @click="createAndAddProduct"
           >
             Create & Add
+          </v-btn>
+        </template>
+      </BaseDialog>
+
+      <BaseDialog v-model="showUnitQuantityDialog" title="Add to List" :max-width="450">
+        <div v-if="selectedProductToAdd" class="unit-quantity-content">
+          <p class="product-name-label">
+            <strong>{{ selectedProductToAdd.name }}</strong>
+          </p>
+
+          <div class="form-row">
+            <BaseInput v-model.number="addQuantity" type="number" label="Quantity" min="1" />
+            <BaseSelect
+              v-model="addUnit"
+              :items="unitOptions"
+              item-title="title"
+              item-value="value"
+              label="Unit"
+            />
+          </div>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!addQuantity || addQuantity < 1"
+            @click="confirmAddProduct"
+          >
+            Add to List
           </v-btn>
         </template>
       </BaseDialog>
@@ -856,5 +880,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 2rem 0;
+}
+
+.unit-quantity-content {
+  padding: 1rem 0;
+}
+
+.product-name-label {
+  font-size: 1.125rem;
+  color: #212121;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 </style>
