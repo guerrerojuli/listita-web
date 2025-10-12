@@ -6,6 +6,7 @@ import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
+import BaseNotification from '@/components/BaseNotification.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 
@@ -236,9 +237,6 @@ async function confirmDeleteProduct() {
 
       <!-- Dialog for adding new product -->
       <BaseDialog v-model="dialog" title="Add product">
-        <v-alert v-if="newProductError" type="error" class="mb-4" density="comfortable">
-          {{ newProductError }}
-        </v-alert>
         <BaseInput v-model="newProductName" label="Name" class="mb-4" />
 
         <div v-if="!showInlineCategoryCreate" class="mb-4">
@@ -258,15 +256,19 @@ async function confirmDeleteProduct() {
         </div>
 
         <div v-else class="mb-4">
-          <v-alert v-if="inlineCategoryError" type="error" class="mb-3" density="compact">
-            {{ inlineCategoryError }}
-          </v-alert>
           <BaseInput
             v-model="inlineCategoryName"
             label="Category name"
             placeholder="Enter category name"
             class="mb-3"
             @keyup.enter="createInlineCategory"
+          />
+          <BaseNotification
+            v-if="inlineCategoryError"
+            variant="text"
+            type="error"
+            :message="inlineCategoryError"
+            :model-value="!!inlineCategoryError"
           />
           <div class="inline-category-actions">
             <v-btn
@@ -304,6 +306,15 @@ async function confirmDeleteProduct() {
         </div>
 
         <template #actions="{ close }">
+          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
+            <BaseNotification
+              v-if="newProductError"
+              variant="text"
+              type="error"
+              :message="newProductError"
+              :model-value="!!newProductError"
+            />
+          </div>
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn
             class="btn-add"

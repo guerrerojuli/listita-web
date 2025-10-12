@@ -7,10 +7,13 @@ import SearchDropdown from '@/components/SearchDropdown.vue'
 import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
 import { usePurchasesStore } from '@/stores/purchases'
+import { useNotification } from '@/composables/useNotification'
 
 const router = useRouter()
+const { showSuccess, showError } = useNotification()
 
 const listsStore = useListsStore()
 const purchasesStore = usePurchasesStore()
@@ -27,6 +30,7 @@ const showShareDialog = ref(false)
 const shareEmail = ref('')
 const shareListId = ref<number | null>(null)
 const shareError = ref('')
+const shareLoading = ref(false)
 const showDeleteDialog = ref(false)
 const deleteListId = ref<number | null>(null)
 const deleteListName = ref('')
@@ -129,17 +133,22 @@ function handleShareList(listId: string) {
   shareListId.value = Number(listId)
   shareEmail.value = ''
   shareError.value = ''
+  shareLoading.value = false
   showShareDialog.value = true
 }
 
 async function submitShareList() {
-  if (shareListId.value && shareEmail.value.trim()) {
+  if (shareListId.value && shareEmail.value.trim() && !shareLoading.value) {
+    shareLoading.value = true
+    shareError.value = ''
     try {
       await listsStore.shareList(shareListId.value, shareEmail.value.trim())
       showShareDialog.value = false
-      alert('List shared successfully!')
+      shareLoading.value = false
+      showSuccess('List shared successfully!')
     } catch (err: any) {
       shareError.value = err.message || 'Failed to share list'
+      shareLoading.value = false
     }
   }
 }
@@ -156,9 +165,9 @@ async function handleRestorePurchase(purchaseId: number) {
       await purchasesStore.restorePurchase(purchaseId)
       await listsStore.fetchLists()
       showPurchasesDialog.value = false
-      alert('Purchase restored successfully!')
+      showSuccess('Purchase restored successfully!')
     } catch (err) {
-      alert('Failed to restore purchase')
+      showError('Failed to restore purchase')
     }
   }
 }
@@ -266,12 +275,18 @@ onMounted(() => {
 
       <!-- Dialog for creating new list -->
       <BaseDialog v-model="dialog" title="New List">
-        <v-alert v-if="newListError" type="error" class="mb-4" density="comfortable">
-          {{ newListError }}
-        </v-alert>
         <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
 
         <template #actions="{ close }">
+          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
+            <BaseNotification
+              v-if="newListError"
+              variant="text"
+              type="error"
+              :message="newListError"
+              :model-value="!!newListError"
+            />
+          </div>
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn
             class="btn-add"
@@ -327,9 +342,6 @@ onMounted(() => {
 
       <!-- Dialog for sharing list -->
       <BaseDialog v-model="showShareDialog" title="Share List">
-        <v-alert v-if="shareError" type="error" class="mb-4" density="comfortable">
-          {{ shareError }}
-        </v-alert>
         <BaseInput
           v-model="shareEmail"
           label="Email address"
@@ -340,11 +352,21 @@ onMounted(() => {
         />
 
         <template #actions="{ close }">
+          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
+            <BaseNotification
+              v-if="shareError"
+              variant="text"
+              type="error"
+              :message="shareError"
+              :model-value="!!shareError"
+            />
+          </div>
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn
             class="btn-add"
             elevation="0"
-            :disabled="!shareEmail.trim()"
+            :disabled="!shareEmail.trim() || shareLoading"
+            :loading="shareLoading"
             @click="submitShareList"
           >
             Share
