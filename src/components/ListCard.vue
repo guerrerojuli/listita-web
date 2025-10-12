@@ -74,7 +74,10 @@ function viewHistory() {
   <div class="list-card" @click="emit('click')">
     <div class="list-card-content">
       <div class="list-card-info">
-        <h3 class="list-card-title">{{ list.name }}</h3>
+        <div class="list-card-title-row">
+          <h3 class="list-card-title">{{ list.name }}</h3>
+          <v-icon v-if="list.recurring" icon="mdi-star" size="20" class="recurring-badge" />
+        </div>
         <p class="list-card-subtitle">{{ subtitle }}</p>
       </div>
 
@@ -92,7 +95,7 @@ function viewHistory() {
 
         <v-card min-width="220" class="menu-card" elevation="8">
           <v-list class="menu-list" density="compact">
-            <v-list-item @click="toggleRecurrent" class="menu-item">
+            <v-list-item @click="toggleRecurrent" class="menu-item menu-item-recurring" rounded="lg">
               <template v-slot:prepend>
                 <v-icon
                   :icon="list.recurring ? 'mdi-star' : 'mdi-star-outline'"
@@ -108,28 +111,28 @@ function viewHistory() {
 
             <v-divider class="menu-divider" />
 
-            <v-list-item @click="renameList" class="menu-item">
+            <v-list-item @click="renameList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Rename</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="togglePrivate" class="menu-item">
+            <v-list-item @click="togglePrivate" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-lock-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Make private</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="shareList" class="menu-item">
+            <v-list-item @click="shareList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-share-variant-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Share</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="viewHistory" class="menu-item">
+            <v-list-item @click="viewHistory" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-history" size="20" class="menu-icon" />
               </template>
@@ -138,9 +141,9 @@ function viewHistory() {
 
             <v-divider class="menu-divider" />
 
-            <v-list-item @click="deleteList" class="menu-item menu-item-danger">
+            <v-list-item @click="deleteList" class="menu-item menu-item-danger" rounded="lg">
               <template v-slot:prepend>
-                <v-icon icon="mdi-delete-outline" size="20" class="menu-icon" />
+                <v-icon icon="mdi-delete-outline" size="20" class="menu-icon menu-icon-delete" />
               </template>
               <v-list-item-title class="menu-text">Delete</v-list-item-title>
             </v-list-item>
@@ -177,11 +180,23 @@ function viewHistory() {
   flex: 1;
 }
 
+.list-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
 .list-card-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: #000;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
+}
+
+.recurring-badge {
+  color: #ffa726;
+  flex-shrink: 0;
 }
 
 .list-card-subtitle {
@@ -210,28 +225,34 @@ function viewHistory() {
   background: white;
 }
 
+.menu-list :deep(.v-list-item) {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
 .menu-item {
   cursor: pointer;
   min-height: 48px;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 2px;
+  padding: 0.5rem 0.75rem !important;
   transition: all 0.15s ease;
 }
 
 .menu-item:hover {
   background-color: #f5f5f5 !important;
-  transform: translateX(2px);
 }
 
 .menu-item:active {
   background-color: #eeeeee !important;
-  transform: translateX(0);
 }
+
 
 .menu-icon {
   color: #616161;
   transition: color 0.15s ease;
+}
+
+.menu-icon-delete {
+  color: #e53935 !important;
 }
 
 .menu-icon-active {
@@ -242,6 +263,10 @@ function viewHistory() {
   color: #424242;
 }
 
+.menu-item:hover .menu-icon-active {
+  color: #ffb74d !important;
+}
+
 .menu-text {
   font-size: 0.9375rem;
   font-weight: 500;
@@ -249,8 +274,12 @@ function viewHistory() {
   letter-spacing: -0.01em;
 }
 
-.menu-item-danger {
-  margin-top: 4px;
+.menu-item-recurring:hover {
+  background-color: #fff3cd !important;
+}
+
+.menu-item-recurring:hover .menu-icon {
+  color: #ffa726 !important;
 }
 
 .menu-item-danger:hover {
@@ -266,7 +295,7 @@ function viewHistory() {
 }
 
 .menu-divider {
-  margin: 0.5rem 0;
+  margin: 0;
   border-color: rgba(0, 0, 0, 0.08);
 }
 </style>
