@@ -101,7 +101,6 @@ function handleClose() {
   transition: all 0.3s ease;
 }
 
-/* Filled variant - with background (for toasts) */
 .notification-filled {
   padding: 0.875rem 1rem;
   border-radius: 8px;
@@ -109,7 +108,6 @@ function handleClose() {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
-/* Text variant - text only (for modals) */
 .notification-text {
   padding: 0;
   margin: 0;
@@ -148,7 +146,6 @@ function handleClose() {
   opacity: 1;
 }
 
-/* Slide animation */
 .notification-slide-enter-active,
 .notification-slide-leave-active {
   transition: all 0.3s ease;

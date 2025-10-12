@@ -79,7 +79,7 @@ async function handleSubmit() {
         variant="outlined"
         density="comfortable"
         class="tall-input"
-        autocomplete="new-password"
+        autocomplete="off"
         required
       />
       <v-text-field
@@ -90,7 +90,7 @@ async function handleSubmit() {
         variant="outlined"
         density="comfortable"
         class="tall-input"
-        autocomplete="new-password"
+        autocomplete="off"
         required
       />
 

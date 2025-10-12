@@ -8,6 +8,7 @@ interface Props {
   hint?: string
   persistentHint?: boolean
   disabled?: boolean
+  autocomplete?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -15,6 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
   autofocus: false,
   persistentHint: false,
   disabled: false,
+  autocomplete: 'off',
 })
 
 const emit = defineEmits<{
@@ -41,6 +43,7 @@ function handleKeyup(event: KeyboardEvent) {
     :hint="props.hint"
     :persistent-hint="props.persistentHint"
     :disabled="props.disabled"
+    :autocomplete="props.autocomplete"
     variant="outlined"
     density="comfortable"
     @update:model-value="handleInput"

@@ -34,7 +34,6 @@ const subtitle = computed(() => {
   } else {
     parts.push('Only you')
   }
-  // Product count is not present in list payload; omit
 
   return parts.join(' - ')
 })

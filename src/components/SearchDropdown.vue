@@ -69,6 +69,7 @@ function handleClickOutside() {
       bg-color="white"
       rounded="lg"
       hide-details
+      autocomplete="off"
       class="search-field"
       @update:model-value="handleInput"
       @focus="handleFocus"
@@ -85,7 +86,6 @@ function handleClickOutside() {
       </template>
     </v-text-field>
 
-    <!-- Dropdown slot -->
     <v-card v-if="showDropdown && inputValue" class="search-results mt-2" elevation="8">
       <slot name="dropdown" />
     </v-card>
@@ -95,6 +95,7 @@ function handleClickOutside() {
 <style scoped>
 .search-dropdown-container {
   position: relative;
+  flex: 1;
 }
 
 .search-field {
@@ -102,6 +103,15 @@ function handleClickOutside() {
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
+  height: 44px;
+}
+
+.search-field :deep(.v-input__control) {
+  height: 44px !important;
+}
+
+.search-field :deep(.v-field) {
+  height: 44px !important;
 }
 
 .search-field:focus-within {
@@ -123,7 +133,8 @@ function handleClickOutside() {
 }
 
 .search-field :deep(.v-field__input) {
-  padding: 1rem 1.25rem;
+  padding: 0.625rem 1.25rem;
+  min-height: 44px;
 }
 
 .search-field :deep(.v-field__outline) {

@@ -99,26 +99,39 @@ async function handleChangePassword() {
 </script>
 
 <template>
-  <v-app-bar color="white" elevation="1" height="72">
-    <v-container class="navbar-container">
-      <RouterLink to="/" class="nav-brand">
-        <v-icon size="32">mdi-cart-outline</v-icon>
-        <span class="brand-text">Listita</span>
-      </RouterLink>
-
-      <div class="nav-center">
-        <RouterLink to="/" class="nav-link" active-class="nav-link-active"> Lists </RouterLink>
-        <RouterLink to="/products" class="nav-link" active-class="nav-link-active">
-          Products
+  <v-navigation-drawer permanent class="sidebar" width="280">
+    <div class="sidebar-content">
+      <div class="sidebar-header">
+        <RouterLink to="/" class="nav-brand">
+          <v-icon size="32">mdi-cart-outline</v-icon>
+          <span class="brand-text">Listita</span>
         </RouterLink>
       </div>
 
-      <div v-if="auth.isAuthenticated">
-        <v-menu v-model="showProfileMenu" location="bottom end">
+      <nav class="sidebar-nav">
+        <RouterLink to="/" class="sidebar-link" active-class="sidebar-link-active">
+          <v-icon size="20" class="sidebar-link-icon">mdi-format-list-bulleted</v-icon>
+          <span>Lists</span>
+        </RouterLink>
+        <RouterLink to="/products" class="sidebar-link" active-class="sidebar-link-active">
+          <v-icon size="20" class="sidebar-link-icon">mdi-package-variant</v-icon>
+          <span>Products</span>
+        </RouterLink>
+      </nav>
+
+      <div v-if="auth.isAuthenticated" class="sidebar-footer">
+        <v-menu v-model="showProfileMenu" location="top" :close-on-content-click="false">
           <template v-slot:activator="{ props }">
-            <v-btn icon="mdi-account-circle" variant="text" size="large" v-bind="props" />
+            <div class="user-profile sidebar-link" :class="{ 'sidebar-link-active': showProfileMenu }" v-bind="props">
+              <v-avatar color="grey-lighten-1" size="32">
+                <v-icon icon="mdi-account" size="20" />
+              </v-avatar>
+              <div v-if="auth.user" class="user-info">
+                <span class="user-name">{{ auth.user.name }} {{ auth.user.surname }}</span>
+              </div>
+            </div>
           </template>
-          <v-card min-width="280">
+          <v-card class="user-menu-card">
             <v-list>
               <v-list-item v-if="auth.user" class="pb-2">
                 <v-list-item-title class="font-weight-bold"
@@ -141,11 +154,15 @@ async function handleChangePassword() {
           </v-card>
         </v-menu>
       </div>
-      <RouterLink v-else to="/login" class="nav-link">Login</RouterLink>
-    </v-container>
-  </v-app-bar>
+      <div v-else class="sidebar-footer">
+        <RouterLink to="/login" class="login-link">
+          <v-icon size="20" class="mr-2">mdi-login</v-icon>
+          Login
+        </RouterLink>
+      </div>
+    </div>
+  </v-navigation-drawer>
 
-  <!-- Profile Edit Dialog -->
   <BaseDialog v-model="showProfileDialog" title="Edit Profile">
     <v-alert v-if="profileError" type="error" class="mb-4" density="comfortable">
       {{ profileError }}
@@ -162,7 +179,6 @@ async function handleChangePassword() {
     </template>
   </BaseDialog>
 
-  <!-- Password Change Dialog -->
   <BaseDialog v-model="showPasswordDialog" title="Change Password">
     <v-alert v-if="passwordError" type="error" class="mb-4" density="comfortable">
       {{ passwordError }}
@@ -170,16 +186,29 @@ async function handleChangePassword() {
     <v-alert v-if="passwordSuccess" type="success" class="mb-4" density="comfortable">
       {{ passwordSuccess }}
     </v-alert>
-    <BaseInput v-model="currentPassword" label="Current Password" type="password" class="mb-4" />
+    <input type="text" autocomplete="username" style="display: none" />
+    <BaseInput
+      v-model="currentPassword"
+      label="Current Password"
+      type="password"
+      autocomplete="current-password"
+      class="mb-4"
+    />
     <BaseInput
       v-model="newPassword"
       label="New Password"
       type="password"
+      autocomplete="new-password"
       hint="Minimum 6 characters"
       persistent-hint
       class="mb-4"
     />
-    <BaseInput v-model="confirmPassword" label="Confirm New Password" type="password" />
+    <BaseInput
+      v-model="confirmPassword"
+      label="Confirm New Password"
+      type="password"
+      autocomplete="new-password"
+    />
 
     <template #actions="{ close }">
       <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
@@ -189,55 +218,135 @@ async function handleChangePassword() {
 </template>
 
 <style scoped>
-.navbar-container {
+.sidebar {
+  background-color: white !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 12px !important;
+  margin: 1rem !important;
+  height: calc(100vh - 2rem) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.sidebar-content {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   height: 100%;
-  padding: 0 2rem;
-  position: relative;
+  padding: 1.5rem 0;
+}
+
+.sidebar-header {
+  padding: 0 1.5rem 2rem 1.5rem;
+  margin-bottom: 0.9rem;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   text-decoration: none;
   color: #000;
   transition: opacity 0.2s;
 }
 
-.nav-brand:hover {
-  opacity: 0.7;
-}
-
 .brand-text {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
-.nav-center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+.sidebar-nav {
+  flex: 1;
   display: flex;
-  gap: 2rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1rem;
 }
 
-.nav-link {
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
   text-decoration: none;
   color: #666;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  transition: color 0.2s;
-  padding: 0.5rem 0;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
-.nav-link:hover {
+.sidebar-link:hover {
+  background-color: rgba(0, 0, 0, 0.04);
   color: #000;
 }
 
-.nav-link-active {
+.sidebar-link-active {
+  background-color: #f0f0f0 !important;
+  color: #000 !important;
+}
+
+.sidebar-link-active .sidebar-link-icon {
+  color: #000 !important;
+}
+
+.sidebar-link-icon {
+  color: #666;
+  transition: color 0.2s;
+}
+
+.sidebar-link:hover .sidebar-link-icon {
+  color: #000;
+}
+
+.sidebar-footer {
+  padding: 0 1rem;
+  margin-top: auto;
+}
+
+.user-profile {
+  cursor: pointer;
+  width: 100%;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-profile:hover .user-name {
+  color: #000;
+}
+
+.user-menu-card {
+  width: 248px;
+  border-radius: 8px;
+}
+
+.login-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1rem;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.login-link:hover {
+  background-color: #f0f0f0;
   color: #000;
 }
 </style>

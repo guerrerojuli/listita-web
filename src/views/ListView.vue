@@ -7,6 +7,7 @@ import BaseDialog from '@/components/BaseDialog.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
+import { useNotification } from '@/composables/useNotification'
 import ProductItem from '@/components/ProductItem.vue'
 import type { Product } from '@/types/api'
 
@@ -15,11 +16,11 @@ const router = useRouter()
 const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
+const { showWarning } = useNotification()
 
 const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
 
-// Update document title when list changes
 watch(
   list,
   (newList) => {
@@ -40,7 +41,6 @@ const showDeleteDialog = ref(false)
 const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
 
-// Filter list items based on search query
 const filteredListItems = computed(() => {
   if (!searchQuery.value) return items.value || []
   return (items.value || []).filter((i) =>
@@ -48,7 +48,6 @@ const filteredListItems = computed(() => {
   )
 })
 
-// Get available products to add (excluding ones already in list)
 const availableProducts = computed(() => {
   if (!searchQuery.value) return []
   const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
@@ -62,7 +61,6 @@ const availableProducts = computed(() => {
 async function handleSearchEnter() {
   if (!searchQuery.value.trim()) return
 
-  // Search for products
   isSearching.value = true
   try {
     await globalProductsStore.fetchProducts({ name: searchQuery.value.trim() })
@@ -72,14 +70,12 @@ async function handleSearchEnter() {
     isSearching.value = false
   }
 
-  // If there's a matching product, add the first one
   if (availableProducts.value.length > 0) {
     const product = availableProducts.value[0]
     if (product) {
       await handleAddProduct(product)
     }
   } else {
-    // No products found, clear search and navigate to create one
     searchQuery.value = ''
     router.push('/products')
   }
@@ -87,11 +83,10 @@ async function handleSearchEnter() {
 
 async function handleAddProduct(product: Product) {
   try {
-    // Check if product is already in the list
     const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
 
     if (isAlreadyInList) {
-      alert(`"${product.name}" is already in this list`)
+      showWarning(`"${product.name}" is already in this list`)
       searchQuery.value = ''
       return
     }
@@ -140,9 +135,7 @@ async function confirmDeleteProduct() {
   }
 }
 
-function handleEditProduct() {
-  // Not implemented in API for items (only quantity/unit). Handled via quantity controls.
-}
+function handleEditProduct() {}
 
 async function handleEditList() {
   if (list.value) {
@@ -189,30 +182,25 @@ function handleShareList() {
 onMounted(async () => {
   isLoading.value = true
 
-  // If list is not in store, try to fetch it from API
   if (!list.value) {
     try {
       const fetchedList = await listsStore.getListById(listId.value)
-      // Add to store if not already there
       if (fetchedList && !listsStore.lists.find((l) => l.id === fetchedList.id)) {
         listsStore.lists.push(fetchedList)
       }
     } catch (err) {
       console.error('Failed to load list:', err)
-      // Only redirect if list doesn't exist
       router.push('/')
       return
     }
   }
 
-  // Load list items
   try {
     await productsStore.loadListItems(listId.value)
   } catch (err) {
     console.error('Failed to load list items:', err)
   }
 
-  // Pre-load products for search
   try {
     await globalProductsStore.fetchProducts()
   } catch (err) {
@@ -331,7 +319,6 @@ onMounted(async () => {
         <p class="text-body-2 text-medium-emphasis">Use the search bar above to add products</p>
       </div>
 
-      <!-- Dialog for deleting product from list -->
       <BaseDialog v-model="showDeleteDialog" title="Remove Product" :max-width="450">
         <div class="delete-confirmation">
           <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
@@ -352,8 +339,7 @@ onMounted(async () => {
 
 <style scoped>
 .list-view {
-  background-color: #fafafa;
-  min-height: calc(100vh - 72px);
+  min-height: 100vh;
 }
 
 .page-title {
@@ -397,7 +383,6 @@ onMounted(async () => {
   padding: 4rem 2rem;
 }
 
-/* Delete confirmation styles */
 .delete-confirmation {
   text-align: center;
   padding: 1rem 0;

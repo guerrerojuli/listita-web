@@ -35,7 +35,6 @@ const showDeleteDialog = ref(false)
 const deleteListId = ref<number | null>(null)
 const deleteListName = ref('')
 
-// Computed filtered lists for search
 const filteredRecurrentLists = computed(() => {
   if (!searchQuery.value) return recurrentLists.value
   return recurrentLists.value.filter((list) =>
@@ -68,7 +67,6 @@ function handleCreateFromSearch() {
 
 function createNewList() {
   if (newListName.value.trim()) {
-    // Check if list already exists
     const existingList = listsStore.lists.find(
       (list) => list.name.toLowerCase() === newListName.value.trim().toLowerCase(),
     )
@@ -125,7 +123,6 @@ async function handleRenameList(listId: string) {
 }
 
 function handleTogglePrivate(listId: string) {
-  // TODO: Toggle private status
   console.log('Toggle private for list:', listId)
 }
 
@@ -181,17 +178,7 @@ onMounted(() => {
   <NavBar />
   <div class="home-container">
     <v-container class="py-8">
-      <div
-        class="d-flex align-center justify-space-between mb-8"
-        style="max-width: 900px; margin-left: auto; margin-right: auto"
-      >
-        <h1 class="page-title">Lists</h1>
-        <v-btn class="new-list-btn" elevation="0" size="default" @click="handleNewList">
-          New List
-        </v-btn>
-      </div>
-
-      <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
+      <div class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or create a list..."
@@ -199,13 +186,17 @@ onMounted(() => {
           @update:model-value="handleSearchInput"
           @enter="handleCreateFromSearch"
         />
-        <v-fade-transition>
-          <div v-if="searchQuery.trim()" class="search-hint mt-2">
-            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-            Press Enter to create "{{ searchQuery }}"
-          </div>
-        </v-fade-transition>
+        <v-btn class="new-list-btn" elevation="0" :height="44" @click="handleNewList">
+          New List
+          <v-icon size="20" class="ml-2">mdi-file-edit-outline</v-icon>
+        </v-btn>
       </div>
+      <v-fade-transition>
+        <div v-if="searchQuery.trim()" class="search-hint">
+          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+          Press Enter to create "{{ searchQuery }}"
+        </div>
+      </v-fade-transition>
 
       <div
         v-if="filteredRecurrentLists.length > 0"
@@ -273,7 +264,6 @@ onMounted(() => {
         <p class="text-body-2 text-medium-emphasis mb-4">Try a different search term</p>
       </div>
 
-      <!-- Dialog for creating new list -->
       <BaseDialog v-model="dialog" title="New List">
         <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
 
@@ -299,7 +289,6 @@ onMounted(() => {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for purchase history -->
       <BaseDialog v-model="showPurchasesDialog" title="Purchase History" :max-width="800">
         <div v-if="purchasesStore.loading" class="text-center py-8">
           <v-progress-circular indeterminate color="primary" />
@@ -340,7 +329,6 @@ onMounted(() => {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for sharing list -->
       <BaseDialog v-model="showShareDialog" title="Share List">
         <BaseInput
           v-model="shareEmail"
@@ -374,7 +362,6 @@ onMounted(() => {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for deleting list -->
       <BaseDialog v-model="showDeleteDialog" title="Delete List" :max-width="450">
         <div class="delete-confirmation">
           <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
@@ -396,24 +383,34 @@ onMounted(() => {
 
 <style scoped>
 .home-container {
-  background-color: #fafafa;
-  min-height: calc(100vh - 64px);
+  min-height: 100vh;
 }
 
-.page-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: #000;
-  letter-spacing: -0.5px;
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .new-list-btn {
-  background-color: #000 !important;
-  color: white !important;
+  background-color: #c7c7c7 !important;
+  color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border-radius: 6px;
+  border: 1px solid #b9b9b9 !important;
+  border-radius: 12px;
+  flex-shrink: 0;
+  min-width: 120px;
+  transition: background-color 0.2s ease;
+}
+
+.new-list-btn:hover {
+  background-color: #969696 !important;
+  color: white !important;
 }
 
 .search-hint {
@@ -421,7 +418,10 @@ onMounted(() => {
   align-items: center;
   font-size: 0.875rem;
   color: #666;
-  padding: 0.5rem 0.75rem;
+  padding: 0 0.75rem 0.5rem 0.75rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .section-title {
@@ -436,7 +436,6 @@ onMounted(() => {
   gap: 1rem;
 }
 
-/* Delete confirmation styles */
 .delete-confirmation {
   text-align: center;
   padding: 1rem 0;

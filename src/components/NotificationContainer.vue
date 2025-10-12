@@ -126,7 +126,6 @@ const notificationConfig = (type: string) => {
   opacity: 1;
 }
 
-/* Toast animations */
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.4s ease;

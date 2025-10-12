@@ -16,7 +16,7 @@ const { searchQuery, filteredProducts } = storeToRefs(productsStore)
 const dialog = ref(false)
 const editDialog = ref(false)
 const newProductName = ref('')
-const newProductError = ref('')
+const newProductWarning = ref('')
 const newProductCategoryId = ref<number | null>(null)
 const newProductUnit = ref<string | null>(null)
 const newProductUnitValue = ref<number | null>(null)
@@ -52,7 +52,7 @@ const inlineCategoryError = ref('')
 function handleAddProduct() {
   inlineCategoryName.value = ''
   inlineCategoryError.value = ''
-  newProductError.value = ''
+  newProductWarning.value = ''
   dialog.value = true
 }
 
@@ -60,7 +60,7 @@ function handleSearchEnter() {
   if (searchQuery.value.trim()) {
     newProductName.value = searchQuery.value.trim()
     searchQuery.value = ''
-    newProductError.value = ''
+    newProductWarning.value = ''
     dialog.value = true
   }
 }
@@ -91,13 +91,12 @@ async function createInlineCategory() {
 
 async function createNewProduct() {
   if (newProductName.value.trim() && newProductCategoryId.value) {
-    // Check if product already exists
     const existingProduct = productsStore.products.find(
       (product) => product.name.toLowerCase() === newProductName.value.trim().toLowerCase(),
     )
 
     if (existingProduct) {
-      newProductError.value = 'A product with this name already exists'
+      newProductWarning.value = 'A product with this name already exists'
       return
     }
 
@@ -116,7 +115,7 @@ async function createNewProduct() {
     newProductCategoryId.value = null
     newProductUnit.value = null
     newProductUnitValue.value = null
-    newProductError.value = ''
+    newProductWarning.value = ''
     dialog.value = false
   }
 }
@@ -168,7 +167,6 @@ async function confirmDeleteProduct() {
     showDeleteDialog.value = false
     deleteProductId.value = null
     deleteProductName.value = ''
-    // If we're deleting from edit dialog, close it too
     if (editDialog.value && editingProduct.value?.id === deletedId) {
       editDialog.value = false
       editingProduct.value = null
@@ -176,7 +174,6 @@ async function confirmDeleteProduct() {
   }
 }
 
-// load initial data in sequence: categories first, then products to enrich with category
 ;(async () => {
   try {
     await productsStore.fetchCategories()
@@ -191,28 +188,24 @@ async function confirmDeleteProduct() {
   <NavBar />
   <div class="products-view">
     <v-container class="py-8">
-      <div
-        class="d-flex align-center justify-space-between mb-8"
-        style="max-width: 900px; margin-left: auto; margin-right: auto"
-      >
-        <h1 class="page-title">Products</h1>
-        <v-btn class="add-product-btn" elevation="0" @click="handleAddProduct"> Add Product </v-btn>
-      </div>
-
-      <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
+      <div class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or create a product..."
           :show-dropdown="false"
           @enter="handleSearchEnter"
         />
-        <v-fade-transition>
-          <div v-if="searchQuery.trim()" class="search-hint mt-2">
-            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-            Press Enter to create "{{ searchQuery }}"
-          </div>
-        </v-fade-transition>
+        <v-btn class="add-product-btn" elevation="0" :height="44" @click="handleAddProduct">
+          Add Product
+          <v-icon size="20" class="ml-2">mdi-plus</v-icon>
+        </v-btn>
       </div>
+      <v-fade-transition>
+        <div v-if="searchQuery.trim()" class="search-hint">
+          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+          Press Enter to create "{{ searchQuery }}"
+        </div>
+      </v-fade-transition>
 
       <div
         v-if="filteredProducts.length > 0"
@@ -235,7 +228,6 @@ async function confirmDeleteProduct() {
         <p class="text-h6 text-medium-emphasis">No products found</p>
       </div>
 
-      <!-- Dialog for adding new product -->
       <BaseDialog v-model="dialog" title="Add product">
         <BaseInput v-model="newProductName" label="Name" class="mb-4" />
 
@@ -308,11 +300,11 @@ async function confirmDeleteProduct() {
         <template #actions="{ close }">
           <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
             <BaseNotification
-              v-if="newProductError"
+              v-if="newProductWarning"
               variant="text"
-              type="error"
-              :message="newProductError"
-              :model-value="!!newProductError"
+              type="warning"
+              :message="newProductWarning"
+              :model-value="!!newProductWarning"
             />
           </div>
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
@@ -327,7 +319,6 @@ async function confirmDeleteProduct() {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for editing product -->
       <BaseDialog v-model="editDialog" title="Edit product">
         <BaseInput v-model="editProductName" label="Name" class="mb-4" />
         <BaseSelect
@@ -374,7 +365,6 @@ async function confirmDeleteProduct() {
         </template>
       </BaseDialog>
 
-      <!-- Dialog for deleting product -->
       <BaseDialog v-model="showDeleteDialog" title="Delete Product" :max-width="450">
         <div class="delete-confirmation">
           <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
@@ -396,24 +386,34 @@ async function confirmDeleteProduct() {
 
 <style scoped>
 .products-view {
-  background-color: #fafafa;
-  min-height: calc(100vh - 72px);
+  min-height: 100vh;
 }
 
-.page-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: #000;
-  letter-spacing: -0.5px;
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .add-product-btn {
-  background-color: #000 !important;
-  color: white !important;
+  background-color: #c7c7c7 !important;
+  color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border-radius: 6px;
+  border: 1px solid #b9b9b9 !important;
+  border-radius: 12px;
+  flex-shrink: 0;
+  min-width: 140px;
+  transition: background-color 0.2s ease;
+}
+
+.add-product-btn:hover {
+  background-color: #969696 !important;
+  color: white !important;
 }
 
 .search-hint {
@@ -421,7 +421,10 @@ async function confirmDeleteProduct() {
   align-items: center;
   font-size: 0.875rem;
   color: #666;
-  padding: 0.5rem 0.75rem;
+  padding: 0 0.75rem 0.5rem 0.75rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .products-grid {
@@ -460,7 +463,6 @@ async function confirmDeleteProduct() {
   background-color: #1a1a1a !important;
 }
 
-/* Delete confirmation styles */
 .delete-confirmation {
   text-align: center;
   padding: 1rem 0;
