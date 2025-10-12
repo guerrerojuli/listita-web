@@ -4,11 +4,14 @@ import { ShoppingListApi, ShoppingList } from '@/api/shoppingList'
 import type { ShoppingList as ShoppingListType } from '@/types/api'
 
 export const useListsStore = defineStore('lists', () => {
-  // State
   const lists = ref<ShoppingListType[]>([])
   const searchQuery = ref('')
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const currentPage = ref(1)
+  const hasMore = ref(true)
+  const loadingMore = ref(false)
 
-  // Getters
   const recurrentLists = computed(() =>
     lists.value.filter((list) => list.recurring && matchesSearch(list)),
   )
@@ -17,21 +20,74 @@ export const useListsStore = defineStore('lists', () => {
     lists.value.filter((list) => !list.recurring && matchesSearch(list)),
   )
 
-  // Helper function
   function matchesSearch(list: ShoppingListType): boolean {
     if (!searchQuery.value) return true
     return list.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   }
 
   function mapShoppingList(data: ShoppingListType): ShoppingListType {
-    // Return data as-is from API, no need to instantiate class
     return data
   }
 
-  // Actions
+  function getErrorMessage(err: any): string {
+    if (!err) return 'Something went wrong. Please try again.'
+
+    const errorMessage = err.message || ''
+
+    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error') || errorMessage.includes('network')) {
+      return 'Unable to connect to the server. Please check your internet connection and try again.'
+    }
+
+    if (err.status >= 500) {
+      return 'The server is currently unavailable. Please try again later.'
+    }
+
+    return errorMessage || 'Something went wrong. Please try again.'
+  }
+
   async function fetchLists(params?: { name?: string; owner?: boolean; recurring?: boolean }) {
-    const result = await ShoppingListApi.getAll(undefined, params)
-    lists.value = result.data.map((list) => mapShoppingList(list as unknown as ShoppingListType))
+    loading.value = true
+    error.value = null
+    currentPage.value = 1
+    hasMore.value = true
+
+    try {
+      const result = await ShoppingListApi.getAll(undefined, { ...params, page: 1, per_page: 10 })
+      lists.value = result.data.map((list) => mapShoppingList(list as unknown as ShoppingListType))
+      hasMore.value = result.pagination?.has_next ?? false
+    } catch (err: any) {
+      error.value = getErrorMessage(err)
+      lists.value = []
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadMoreLists(params?: { name?: string; owner?: boolean; recurring?: boolean }) {
+    if (loadingMore.value || !hasMore.value) return
+
+    loadingMore.value = true
+
+    try {
+      currentPage.value += 1
+      const result = await ShoppingListApi.getAll(undefined, {
+        ...params,
+        page: currentPage.value,
+        per_page: 10,
+      })
+      const newLists = result.data.map((list) =>
+        mapShoppingList(list as unknown as ShoppingListType),
+      )
+
+      lists.value = [...lists.value, ...newLists]
+      hasMore.value = result.pagination?.has_next ?? false
+    } catch (err: any) {
+      console.error('Failed to load more lists:', err)
+      currentPage.value -= 1
+    } finally {
+      loadingMore.value = false
+    }
   }
 
   async function createList(name: string, recurring: boolean = false) {
@@ -70,13 +126,11 @@ export const useListsStore = defineStore('lists', () => {
 
   async function purchaseList(id: number) {
     await ShoppingListApi.purchase(id)
-    // Optionally refresh the list after purchase
     await fetchLists()
   }
 
   async function resetListItems(id: number) {
     await ShoppingListApi.reset(id)
-    // Items will need to be refreshed in the products store
   }
 
   async function moveToPantry(id: number, pantryId: number) {
@@ -100,14 +154,17 @@ export const useListsStore = defineStore('lists', () => {
   }
 
   return {
-    // State
     lists,
     searchQuery,
-    // Getters
+    loading,
+    error,
+    currentPage,
+    hasMore,
+    loadingMore,
     recurrentLists,
     activeLists,
-    // Actions
     fetchLists,
+    loadMoreLists,
     createList,
     deleteList,
     getListById,

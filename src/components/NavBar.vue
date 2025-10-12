@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useListsStore } from '@/stores/lists'
+import { useGlobalProductsStore } from '@/stores/globalProducts'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const listsStore = useListsStore()
+const productsStore = useGlobalProductsStore()
+
+const hasError = computed(() => listsStore.error || productsStore.error)
 const showProfileMenu = ref(false)
 const showPasswordDialog = ref(false)
 const showProfileDialog = ref(false)
@@ -119,7 +125,7 @@ async function handleChangePassword() {
         </RouterLink>
       </nav>
 
-      <div v-if="auth.isAuthenticated" class="sidebar-footer">
+      <div v-if="auth.isAuthenticated && !hasError" class="sidebar-footer">
         <v-menu v-model="showProfileMenu" location="top" :close-on-content-click="false">
           <template v-slot:activator="{ props }">
             <div class="user-profile sidebar-link" :class="{ 'sidebar-link-active': showProfileMenu }" v-bind="props">
@@ -154,7 +160,7 @@ async function handleChangePassword() {
           </v-card>
         </v-menu>
       </div>
-      <div v-else class="sidebar-footer">
+      <div v-else-if="!auth.isAuthenticated && !hasError" class="sidebar-footer">
         <RouterLink to="/login" class="login-link">
           <v-icon size="20" class="mr-2">mdi-login</v-icon>
           Login

@@ -8,29 +8,55 @@ interface ListItemWithListId extends ListItemType {
 }
 
 export const useProductsStore = defineStore('products', () => {
-  // State
   const items = ref<ListItemWithListId[]>([])
+  const currentListId = ref<number | null>(null)
+  const currentPage = ref(1)
+  const hasMore = ref(true)
+  const loadingMore = ref(false)
 
-  // Getters
   function getItemsByListId(listId: number): ListItemWithListId[] {
     return items.value.filter((i) => i.listId === listId)
   }
 
   function mapListItem(data: unknown, listId: number): ListItemWithListId {
-    // Return data as-is from API with listId added
     return { ...(data as ListItemType), listId }
   }
 
-  // Actions
   async function loadListItems(listId: number, params?: Record<string, unknown>) {
-    const result = await ListItemApi.getAll(listId, undefined, params)
-    // Tag items with listId for local filtering convenience
+    currentListId.value = listId
+    currentPage.value = 1
+    hasMore.value = true
+
+    const result = await ListItemApi.getAll(listId, undefined, { ...params, page: 1, per_page: 10 })
     items.value = result.data.map((item) => mapListItem(item, listId))
+    hasMore.value = result.pagination?.has_next ?? false
+  }
+
+  async function loadMoreListItems(listId: number, params?: Record<string, unknown>) {
+    if (loadingMore.value || !hasMore.value || currentListId.value !== listId) return
+
+    loadingMore.value = true
+
+    try {
+      currentPage.value += 1
+      const result = await ListItemApi.getAll(listId, undefined, {
+        ...params,
+        page: currentPage.value,
+        per_page: 10,
+      })
+      const newItems = result.data.map((item) => mapListItem(item, listId))
+      items.value = [...items.value, ...newItems]
+      hasMore.value = result.pagination?.has_next ?? false
+    } catch (err: any) {
+      console.error('Failed to load more list items:', err)
+      currentPage.value -= 1
+    } finally {
+      loadingMore.value = false
+    }
   }
 
   async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
     const response = await ListItemApi.add(listId, productId, quantity, unit)
-    // Handle both response formats: direct item or { item: ... }
     const created = (response as { item?: unknown }).item || response
     items.value.unshift(mapListItem(created, listId))
   }
@@ -68,7 +94,12 @@ export const useProductsStore = defineStore('products', () => {
 
   return {
     items,
+    currentListId,
+    currentPage,
+    hasMore,
+    loadingMore,
     loadListItems,
+    loadMoreListItems,
     getItemsByListId,
     addItem,
     deleteItem,

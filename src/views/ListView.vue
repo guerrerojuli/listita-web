@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
+import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import { useNotification } from '@/composables/useNotification'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import ProductItem from '@/components/ProductItem.vue'
 import type { Product } from '@/types/api'
 
@@ -17,6 +22,8 @@ const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
 const { showWarning } = useNotification()
+
+const { hasMore, loadingMore } = storeToRefs(productsStore)
 
 const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
@@ -36,10 +43,38 @@ const items = computed(() => productsStore.getItemsByListId(listId.value))
 const searchQuery = ref('')
 const isLoading = ref(false)
 const isSearching = ref(false)
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const showDeleteDialog = ref(false)
 const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
+
+const showAddProductDialog = ref(false)
+const productSearchQuery = ref('')
+const showCreateProductInDialog = ref(false)
+const newProductName = ref('')
+const newProductCategoryId = ref<number | null>(null)
+const newProductUnit = ref<string | null>(null)
+const newProductUnitValue = ref<number | null>(null)
+const showInlineCategoryCreate = ref(false)
+const inlineCategoryName = ref('')
+const inlineCategoryError = ref('')
+const dialogLoadMoreTrigger = ref<HTMLElement | null>(null)
+
+const unitOptions = [
+  { title: 'No unit', value: 'none' },
+  { title: 'Unit', value: 'unit' },
+  { title: 'Liters', value: 'liters' },
+  { title: 'Milliliters', value: 'milliliters' },
+  { title: 'Kilograms', value: 'kilograms' },
+  { title: 'Grams', value: 'grams' },
+  { title: 'Volume', value: 'volume' },
+  { title: 'Pack', value: 'pack' },
+  { title: 'Pounds', value: 'pounds' },
+  { title: 'Ounces', value: 'ounces' },
+  { title: 'Centimeters', value: 'centimeters' },
+  { title: 'Meters', value: 'meters' },
+]
 
 const filteredListItems = computed(() => {
   if (!searchQuery.value) return items.value || []
@@ -56,6 +91,19 @@ const availableProducts = computed(() => {
     const notInList = !itemProductIds.has(p.id)
     return matchesSearch && notInList
   })
+})
+
+const filteredDialogProducts = computed(() => {
+  const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
+  const allAvailableProducts = (globalProductsStore.products || []).filter(
+    (p) => !itemProductIds.has(p.id),
+  )
+
+  if (!productSearchQuery.value) return allAvailableProducts
+
+  return allAvailableProducts.filter((p) =>
+    p.name?.toLowerCase().includes(productSearchQuery.value.toLowerCase()),
+  )
 })
 
 async function handleSearchEnter() {
@@ -179,6 +227,120 @@ function handleShareList() {
   }
 }
 
+async function handleAddProductFromDialog(product: Product) {
+  try {
+    const defaultUnit = (product.metadata as any)?.unit || 'unit'
+    await productsStore.addItem(listId.value, product.id, 1, defaultUnit)
+    showAddProductDialog.value = false
+    productSearchQuery.value = ''
+  } catch (err: any) {
+    console.error('Failed to add product:', err)
+    const errorMessage = err.message || 'Failed to add product to list'
+    alert(`Failed to add product: ${errorMessage}`)
+  }
+}
+
+function handleCreateProductInDialog() {
+  showCreateProductInDialog.value = true
+  newProductName.value = productSearchQuery.value
+}
+
+function onCategoryChange(value: number | string) {
+  if (value === 'create_new') {
+    showInlineCategoryCreate.value = true
+    newProductCategoryId.value = null
+  } else {
+    showInlineCategoryCreate.value = false
+    newProductCategoryId.value = value as number
+  }
+}
+
+async function createInlineCategory() {
+  if (inlineCategoryName.value.trim()) {
+    try {
+      const newCategory = await globalProductsStore.createCategory(inlineCategoryName.value.trim())
+      inlineCategoryName.value = ''
+      inlineCategoryError.value = ''
+      showInlineCategoryCreate.value = false
+      newProductCategoryId.value = newCategory.id
+    } catch (err) {
+      inlineCategoryError.value = 'Failed to create category'
+    }
+  }
+}
+
+async function createAndAddProduct() {
+  if (newProductName.value.trim() && newProductCategoryId.value) {
+    try {
+      const metadata: any = {}
+      if (newProductUnit.value && newProductUnit.value !== 'none')
+        metadata.unit = newProductUnit.value
+      if (newProductUnitValue.value !== null && !Number.isNaN(newProductUnitValue.value))
+        metadata.unitValue = newProductUnitValue.value
+
+      await globalProductsStore.addProduct(
+        newProductName.value.trim(),
+        newProductCategoryId.value,
+        undefined,
+        metadata,
+      )
+
+      const newProduct = globalProductsStore.products[0]
+      if (newProduct) {
+        await handleAddProductFromDialog(newProduct)
+      }
+
+      newProductName.value = ''
+      newProductCategoryId.value = null
+      newProductUnit.value = null
+      newProductUnitValue.value = null
+      showCreateProductInDialog.value = false
+      showAddProductDialog.value = false
+      productSearchQuery.value = ''
+    } catch (err: any) {
+      console.error('Failed to create product:', err)
+      alert('Failed to create product')
+    }
+  }
+}
+
+function closeAddProductDialog() {
+  showAddProductDialog.value = false
+  showCreateProductInDialog.value = false
+  productSearchQuery.value = ''
+  newProductName.value = ''
+  newProductCategoryId.value = null
+  newProductUnit.value = null
+  newProductUnitValue.value = null
+  showInlineCategoryCreate.value = false
+  inlineCategoryName.value = ''
+  inlineCategoryError.value = ''
+
+  disconnectDialogObserver()
+}
+
+const { setupObserver } = useInfiniteScroll({
+  trigger: loadMoreTrigger,
+  hasMore,
+  loadingMore,
+  onLoadMore: () => productsStore.loadMoreListItems(listId.value),
+})
+
+const { setupObserver: setupDialogObserver, disconnect: disconnectDialogObserver } =
+  useInfiniteScroll({
+    trigger: dialogLoadMoreTrigger,
+    hasMore: computed(() => globalProductsStore.hasMore),
+    loadingMore: computed(() => globalProductsStore.loadingMore),
+    onLoadMore: () => globalProductsStore.loadMoreProducts(),
+    rootMargin: '50px',
+  })
+
+watch(showAddProductDialog, (isOpen) => {
+  if (isOpen && !showCreateProductInDialog.value) {
+    setupDialogObserver()
+  }
+})
+
 onMounted(async () => {
   isLoading.value = true
 
@@ -208,6 +370,7 @@ onMounted(async () => {
   }
 
   isLoading.value = false
+  setupObserver()
 })
 </script>
 
@@ -222,73 +385,77 @@ onMounted(async () => {
   </div>
   <div v-else-if="list" class="list-view">
     <v-container class="py-8">
-      <div
-        class="d-flex align-center justify-space-between mb-8"
-        style="max-width: 900px; margin-left: auto; margin-right: auto"
-      >
-        <div class="d-flex align-center gap-3">
-          <v-btn
-            icon="mdi-arrow-left"
-            variant="text"
-            size="large"
-            class="back-button"
-            @click="router.push('/')"
-          />
+      <div style="max-width: 900px; margin-left: auto; margin-right: auto">
+        <v-btn
+          variant="text"
+          size="small"
+          class="back-button mb-4"
+          @click="router.push('/')"
+        >
+          <v-icon size="18" class="mr-1">mdi-arrow-left</v-icon>
+          Back
+        </v-btn>
+
+        <div class="d-flex align-center justify-space-between mb-8">
           <h1 class="page-title">{{ list.name }}</h1>
-        </div>
-        <div class="header-actions">
-          <v-menu>
-            <template v-slot:activator="{ props }">
-              <v-btn icon="mdi-dots-vertical" variant="text" v-bind="props" />
-            </template>
-            <v-list>
-              <v-list-item @click="handleEditList">
-                <template v-slot:prepend>
-                  <v-icon icon="mdi-pencil-outline" />
-                </template>
-                <v-list-item-title>Rename</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="handleShareList">
-                <template v-slot:prepend>
-                  <v-icon icon="mdi-share-variant-outline" />
-                </template>
-                <v-list-item-title>Share</v-list-item-title>
-              </v-list-item>
-              <v-divider />
-              <v-list-item @click="handleResetList">
-                <template v-slot:prepend>
-                  <v-icon icon="mdi-refresh" />
-                </template>
-                <v-list-item-title>Reset Items</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="handlePurchaseList">
-                <template v-slot:prepend>
-                  <v-icon icon="mdi-cart-check" />
-                </template>
-                <v-list-item-title>Mark as Purchased</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
+          <div class="header-actions">
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn icon="mdi-dots-vertical" variant="text" v-bind="props" />
+              </template>
+              <v-list>
+                <v-list-item @click="handleEditList">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-pencil-outline" />
+                  </template>
+                  <v-list-item-title>Rename</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="handleShareList">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-share-variant-outline" />
+                  </template>
+                  <v-list-item-title>Share</v-list-item-title>
+                </v-list-item>
+                <v-divider />
+                <v-list-item @click="handleResetList">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-refresh" />
+                  </template>
+                  <v-list-item-title>Reset Items</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="handlePurchaseList">
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-cart-check" />
+                  </template>
+                  <v-list-item-title>Mark as Purchased</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </div>
         </div>
       </div>
 
-      <div class="mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
+      <div class="search-row mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
         <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or add a product..."
           :show-dropdown="false"
           @enter="handleSearchEnter"
         />
-        <v-fade-transition>
-          <div v-if="searchQuery.trim() && !isSearching" class="search-hint mt-2">
-            <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-            <span v-if="availableProducts.length > 0 && availableProducts[0]">
-              Press Enter to add "{{ availableProducts[0].name }}"
-            </span>
-            <span v-else> Press Enter to create "{{ searchQuery }}" </span>
-          </div>
-        </v-fade-transition>
+        <v-btn class="add-product-btn" elevation="0" :height="44" @click="showAddProductDialog = true">
+          Add Product
+          <v-icon size="20" class="ml-2">mdi-plus</v-icon>
+        </v-btn>
       </div>
+      <v-fade-transition>
+        <div v-if="searchQuery.trim() && !isSearching" class="search-hint" style="max-width: 900px; margin-left: auto; margin-right: auto; margin-top: -2rem; margin-bottom: 2rem">
+          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
+          <span v-if="availableProducts.length > 0 && availableProducts[0]">
+            Press Enter to add "{{ availableProducts[0].name }}"
+          </span>
+          <span v-else> Press Enter to create "{{ searchQuery }}" </span>
+        </div>
+      </v-fade-transition>
 
       <div
         v-if="filteredListItems && filteredListItems.length > 0"
@@ -307,6 +474,13 @@ onMounted(async () => {
             @delete="handleDeleteProduct(item.id)"
             @edit="handleEditProduct()"
           />
+        </div>
+
+        <!-- Infinite scroll trigger -->
+        <div v-if="!searchQuery" ref="loadMoreTrigger" class="load-more-trigger">
+          <div v-if="loadingMore" class="text-center py-4">
+            <v-progress-circular indeterminate color="primary" size="32" />
+          </div>
         </div>
       </div>
 
@@ -333,6 +507,158 @@ onMounted(async () => {
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Remove</v-btn>
         </template>
       </BaseDialog>
+
+      <BaseDialog v-model="showAddProductDialog" title="Add Product" :max-width="500">
+        <div v-if="!showCreateProductInDialog">
+          <SearchDropdown
+            v-model="productSearchQuery"
+            placeholder="Search products..."
+            :show-dropdown="false"
+            class="mb-4"
+          />
+
+          <div v-if="filteredDialogProducts.length > 0" class="product-list-container">
+            <v-list class="product-list">
+              <v-list-item
+                v-for="product in filteredDialogProducts"
+                :key="product.id"
+                class="product-list-item"
+                @click="handleAddProductFromDialog(product)"
+              >
+                <v-list-item-title>{{ product.name }}</v-list-item-title>
+                <v-list-item-subtitle v-if="product.category">
+                  {{ product.category.name }}
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-icon icon="mdi-plus" size="20" />
+                </template>
+              </v-list-item>
+
+              <!-- Infinite scroll trigger -->
+              <div ref="dialogLoadMoreTrigger" class="dialog-load-more-trigger">
+                <v-list-item v-if="globalProductsStore.loadingMore">
+                  <div class="text-center py-2">
+                    <v-progress-circular indeterminate color="primary" size="24" />
+                  </div>
+                </v-list-item>
+              </div>
+            </v-list>
+          </div>
+
+          <div v-else class="text-center py-8">
+            <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-package-variant</v-icon>
+            <p class="text-body-2 text-medium-emphasis">No products found</p>
+          </div>
+
+          <v-list-item class="create-product-item" @click="handleCreateProductInDialog">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-plus-circle-outline" />
+            </template>
+            <v-list-item-title class="font-weight-medium">
+              Create New Product
+            </v-list-item-title>
+          </v-list-item>
+        </div>
+
+        <div v-else>
+          <BaseInput v-model="newProductName" label="Product Name" class="mb-4" />
+
+          <div v-if="!showInlineCategoryCreate" class="mb-4">
+            <v-select
+              :model-value="newProductCategoryId"
+              :items="[
+                ...globalProductsStore.categories.map((c) => ({ title: c.name, value: c.id })),
+                { title: '+ Create New Category', value: 'create_new' },
+              ]"
+              item-title="title"
+              item-value="value"
+              label="Category"
+              variant="outlined"
+              density="comfortable"
+              @update:model-value="onCategoryChange"
+            />
+          </div>
+
+          <div v-else class="mb-4">
+            <BaseInput
+              v-model="inlineCategoryName"
+              label="Category name"
+              placeholder="Enter category name"
+              class="mb-3"
+              @keyup.enter="createInlineCategory"
+            />
+            <BaseNotification
+              v-if="inlineCategoryError"
+              variant="text"
+              type="error"
+              :message="inlineCategoryError"
+              :model-value="!!inlineCategoryError"
+            />
+            <div class="inline-category-actions">
+              <v-btn
+                class="btn-cancel"
+                elevation="0"
+                @click="
+                  () => {
+                    showInlineCategoryCreate = false
+                    inlineCategoryName = ''
+                    inlineCategoryError = ''
+                  }
+                "
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                class="btn-create-category"
+                elevation="0"
+                :disabled="!inlineCategoryName.trim()"
+                @click="createInlineCategory"
+              >
+                Create
+              </v-btn>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <BaseSelect
+              v-model="newProductUnit"
+              :items="unitOptions"
+              item-title="title"
+              item-value="value"
+              label="Unit"
+            />
+            <BaseInput v-model.number="newProductUnitValue" type="number" label="Value" />
+          </div>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn
+            v-if="!showCreateProductInDialog"
+            class="btn-cancel"
+            elevation="0"
+            @click="closeAddProductDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            v-else
+            class="btn-cancel"
+            elevation="0"
+            @click="showCreateProductInDialog = false"
+          >
+            Back
+          </v-btn>
+          <v-btn
+            v-if="showCreateProductInDialog"
+            class="btn-add"
+            elevation="0"
+            :disabled="!newProductName.trim() || !newProductCategoryId"
+            @click="createAndAddProduct"
+          >
+            Create & Add
+          </v-btn>
+        </template>
+      </BaseDialog>
     </v-container>
   </div>
 </template>
@@ -343,10 +669,9 @@ onMounted(async () => {
 }
 
 .page-title {
-  font-size: 3.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #000;
-  letter-spacing: -0.5px;
 }
 
 .header-actions {
@@ -354,8 +679,16 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
+.back-button {
+  color: #666 !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem !important;
+}
+
 .back-button:hover {
-  background-color: transparent !important;
+  color: #000 !important;
 }
 
 .search-hint {
@@ -422,5 +755,106 @@ onMounted(async () => {
   text-transform: none;
   font-weight: 500;
   color: #666 !important;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.add-product-btn {
+  background-color: #999999 !important;
+  color: #ffffff !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #838383 !important;
+  border-radius: 12px;
+  flex-shrink: 0;
+  min-width: 140px;
+  transition: background-color 0.2s ease;
+}
+
+.add-product-btn:hover {
+  background-color: #757575 !important;
+  color: white !important;
+}
+
+.product-list-container {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.product-list {
+  padding: 0 !important;
+}
+
+.product-list-item {
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.product-list-item:last-child {
+  border-bottom: none;
+}
+
+.product-list-item:hover {
+  background-color: #f5f5f5;
+}
+
+.create-product-item {
+  cursor: pointer;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border-top: none !important;
+}
+
+.create-product-item:hover {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.inline-category-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.btn-create-category {
+  background-color: #000 !important;
+  color: white !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0 1.5rem !important;
+}
+
+.btn-create-category:hover {
+  background-color: #1a1a1a !important;
+}
+
+.dialog-load-more-trigger {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.load-more-trigger {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
 }
 </style>

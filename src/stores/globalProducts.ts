@@ -5,12 +5,15 @@ import { ProductApi, Product } from '@/api/product'
 import type { Product as ProductType, Category as CategoryType } from '@/types/api'
 
 export const useGlobalProductsStore = defineStore('globalProducts', () => {
-  // State
   const products = ref<ProductType[]>([])
   const categories = ref<CategoryType[]>([])
   const searchQuery = ref('')
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const currentPage = ref(1)
+  const hasMore = ref(true)
+  const loadingMore = ref(false)
 
-  // Getters
   const filteredProducts = computed(() => {
     if (!searchQuery.value) return products.value
     const searchLower = searchQuery.value.toLowerCase()
@@ -22,30 +25,88 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   })
 
   function mapCategory(data: CategoryType): CategoryType {
-    // Return data as-is from API, no need to instantiate class
     return data
   }
 
   function mapProduct(data: ProductType): ProductType {
-    // Return data as-is from API, no need to instantiate class
     return data
   }
 
-  // Actions
+  function getErrorMessage(err: any): string {
+    if (!err) return 'Something went wrong. Please try again.'
+
+    const errorMessage = err.message || ''
+
+    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error') || errorMessage.includes('network')) {
+      return 'Unable to connect to the server. Please check your internet connection and try again.'
+    }
+
+    if (err.status >= 500) {
+      return 'The server is currently unavailable. Please try again later.'
+    }
+
+    return errorMessage || 'Something went wrong. Please try again.'
+  }
+
   async function fetchProducts(params?: {
     name?: string
     category_id?: number
     pantry_id?: number
   }) {
-    const result = await ProductApi.getAll(undefined, params)
-    products.value = result.data.map((product) => mapProduct(product as unknown as ProductType))
+    loading.value = true
+    error.value = null
+    currentPage.value = 1
+    hasMore.value = true
+
+    try {
+      const result = await ProductApi.getAll(undefined, { ...params, page: 1, per_page: 10 })
+      products.value = result.data.map((product) => mapProduct(product as unknown as ProductType))
+      hasMore.value = result.pagination?.has_next ?? false
+    } catch (err: any) {
+      error.value = getErrorMessage(err)
+      products.value = []
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadMoreProducts(params?: {
+    name?: string
+    category_id?: number
+    pantry_id?: number
+  }) {
+    if (loadingMore.value || !hasMore.value) return
+
+    loadingMore.value = true
+
+    try {
+      currentPage.value += 1
+      const result = await ProductApi.getAll(undefined, {
+        ...params,
+        page: currentPage.value,
+        per_page: 10,
+      })
+      const newProducts = result.data.map((product) => mapProduct(product as unknown as ProductType))
+      products.value = [...products.value, ...newProducts]
+      hasMore.value = result.pagination?.has_next ?? false
+    } catch (err: any) {
+      console.error('Failed to load more products:', err)
+      currentPage.value -= 1
+    } finally {
+      loadingMore.value = false
+    }
   }
 
   async function fetchCategories(params?: { name?: string }) {
-    const result = await CategoryApi.getAll(undefined, params)
-    categories.value = result.data.map((category) =>
-      mapCategory(category as unknown as CategoryType),
-    )
+    try {
+      const result = await CategoryApi.getAll(undefined, params)
+      categories.value = result.data.map((category) =>
+        mapCategory(category as unknown as CategoryType),
+      )
+    } catch (err: any) {
+      categories.value = []
+    }
   }
 
   async function createCategory(name: string, metadata?: Record<string, unknown>) {
@@ -131,8 +192,14 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     products,
     categories,
     searchQuery,
+    loading,
+    error,
+    currentPage,
+    hasMore,
+    loadingMore,
     filteredProducts,
     fetchProducts,
+    loadMoreProducts,
     fetchCategories,
     createCategory,
     updateCategory,

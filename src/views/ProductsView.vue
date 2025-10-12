@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
@@ -9,9 +9,13 @@ import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
 const productsStore = useGlobalProductsStore()
-const { searchQuery, filteredProducts } = storeToRefs(productsStore)
+const { searchQuery, filteredProducts, loading, error, hasMore, loadingMore } =
+  storeToRefs(productsStore)
+
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const dialog = ref(false)
 const editDialog = ref(false)
@@ -174,14 +178,32 @@ async function confirmDeleteProduct() {
   }
 }
 
-;(async () => {
+const { setupObserver } = useInfiniteScroll({
+  trigger: loadMoreTrigger,
+  hasMore,
+  loadingMore,
+  onLoadMore: () => productsStore.loadMoreProducts(),
+})
+
+onMounted(async () => {
   try {
     await productsStore.fetchCategories()
   } catch {}
   try {
     await productsStore.fetchProducts()
   } catch {}
-})()
+
+  setupObserver()
+})
+
+watch(
+  () => filteredProducts.value.length,
+  (newLength) => {
+    if (newLength > 0) {
+      setupObserver()
+    }
+  },
+)
 </script>
 
 <template>
@@ -189,7 +211,8 @@ async function confirmDeleteProduct() {
   <div class="products-view">
     <v-container class="py-8">
       <h1 class="page-title">Products</h1>
-      <div class="search-row mb-10">
+
+      <div v-if="!error" class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or create a product..."
@@ -202,14 +225,24 @@ async function confirmDeleteProduct() {
         </v-btn>
       </div>
       <v-fade-transition>
-        <div v-if="searchQuery.trim()" class="search-hint">
+        <div v-if="searchQuery.trim() && !error" class="search-hint">
           <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
           Press Enter to create "{{ searchQuery }}"
         </div>
       </v-fade-transition>
 
+      <div v-if="loading" class="empty-state">
+        <v-progress-circular indeterminate color="primary" size="64" class="mb-4" />
+        <p class="text-h6 text-medium-emphasis">Loading products...</p>
+      </div>
+
+      <div v-else-if="error" class="empty-state">
+        <v-icon size="64" color="error" class="mb-4">mdi-alert-circle-outline</v-icon>
+        <p class="text-h6 text-medium-emphasis">{{ error }}</p>
+      </div>
+
       <div
-        v-if="filteredProducts.length > 0"
+        v-else-if="filteredProducts.length > 0"
         class="mb-10"
         style="max-width: 900px; margin-left: auto; margin-right: auto"
       >
@@ -221,6 +254,13 @@ async function confirmDeleteProduct() {
             @edit="handleEditProduct(String(product.id))"
             @delete="handleDeleteProduct(String(product.id))"
           />
+        </div>
+
+        <!-- Infinite scroll trigger -->
+        <div ref="loadMoreTrigger" class="load-more-trigger">
+          <div v-if="loadingMore" class="text-center py-4">
+            <v-progress-circular indeterminate color="primary" size="32" />
+          </div>
         </div>
       </div>
 
@@ -505,5 +545,13 @@ async function confirmDeleteProduct() {
 
 .btn-remove:hover {
   background-color: #c62828 !important;
+}
+
+.load-more-trigger {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
 }
 </style>

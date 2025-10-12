@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
@@ -11,13 +11,17 @@ import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
 import { usePurchasesStore } from '@/stores/purchases'
 import { useNotification } from '@/composables/useNotification'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
 const router = useRouter()
 const { showSuccess, showError, showWarning } = useNotification()
 
 const listsStore = useListsStore()
 const purchasesStore = usePurchasesStore()
-const { recurrentLists, activeLists } = storeToRefs(listsStore)
+const { recurrentLists, activeLists, loading, error, hasMore, loadingMore } =
+  storeToRefs(listsStore)
+
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const searchQuery = ref('')
 
@@ -175,9 +179,26 @@ async function handleRestorePurchase(purchaseId: number) {
   }
 }
 
+const { setupObserver } = useInfiniteScroll({
+  trigger: loadMoreTrigger,
+  hasMore,
+  loadingMore,
+  onLoadMore: () => listsStore.loadMoreLists(),
+})
+
 onMounted(() => {
   listsStore.fetchLists().catch(() => {})
+  setupObserver()
 })
+
+watch(
+  () => [...filteredRecurrentLists.value, ...filteredActiveLists.value].length,
+  (newLength) => {
+    if (newLength > 0) {
+      setupObserver()
+    }
+  },
+)
 </script>
 
 <template>
@@ -185,7 +206,8 @@ onMounted(() => {
   <div class="home-container">
     <v-container class="py-8">
       <h1 class="page-title">Lists</h1>
-      <div class="search-row mb-10">
+
+      <div v-if="!error" class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
           placeholder="Search or create a list..."
@@ -199,14 +221,14 @@ onMounted(() => {
         </v-btn>
       </div>
       <v-fade-transition>
-        <div v-if="searchQuery.trim()" class="search-hint">
+        <div v-if="searchQuery.trim() && !error" class="search-hint">
           <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
           Press Enter to create "{{ searchQuery }}"
         </div>
       </v-fade-transition>
 
       <div
-        v-if="filteredRecurrentLists.length > 0"
+        v-if="filteredRecurrentLists.length > 0 && !error"
         class="mb-10"
         style="max-width: 900px; margin-left: auto; margin-right: auto"
       >
@@ -229,7 +251,7 @@ onMounted(() => {
       </div>
 
       <div
-        v-if="filteredActiveLists.length > 0"
+        v-if="filteredActiveLists.length > 0 && !error"
         class="mb-10"
         style="max-width: 900px; margin-left: auto; margin-right: auto"
       >
@@ -250,8 +272,34 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- Infinite scroll trigger -->
       <div
         v-if="
+          (filteredRecurrentLists.length > 0 || filteredActiveLists.length > 0) &&
+          !error &&
+          !searchQuery
+        "
+        ref="loadMoreTrigger"
+        class="load-more-trigger"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
+        <div v-if="loadingMore" class="text-center py-4">
+          <v-progress-circular indeterminate color="primary" size="32" />
+        </div>
+      </div>
+
+      <div v-if="loading" class="text-center py-16">
+        <v-progress-circular indeterminate color="primary" size="64" class="mb-4" />
+        <p class="text-h6 text-medium-emphasis">Loading lists...</p>
+      </div>
+
+      <div v-else-if="error" class="text-center py-16">
+        <v-icon size="64" color="error" class="mb-4">mdi-alert-circle-outline</v-icon>
+        <p class="text-h6 text-medium-emphasis">{{ error }}</p>
+      </div>
+
+      <div
+        v-else-if="
           filteredRecurrentLists.length === 0 && filteredActiveLists.length === 0 && !searchQuery
         "
         class="text-center py-16"
@@ -261,7 +309,7 @@ onMounted(() => {
       </div>
 
       <div
-        v-if="
+        v-else-if="
           filteredRecurrentLists.length === 0 && filteredActiveLists.length === 0 && searchQuery
         "
         class="text-center py-16"
@@ -484,5 +532,13 @@ onMounted(() => {
 
 .btn-remove:hover {
   background-color: #c62828 !important;
+}
+
+.load-more-trigger {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
 }
 </style>
