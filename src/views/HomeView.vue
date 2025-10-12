@@ -13,7 +13,7 @@ import { usePurchasesStore } from '@/stores/purchases'
 import { useNotification } from '@/composables/useNotification'
 
 const router = useRouter()
-const { showSuccess, showError } = useNotification()
+const { showSuccess, showError, showWarning } = useNotification()
 
 const listsStore = useListsStore()
 const purchasesStore = usePurchasesStore()
@@ -23,7 +23,7 @@ const searchQuery = ref('')
 
 const dialog = ref(false)
 const newListName = ref('')
-const newListError = ref('')
+const newListWarning = ref('')
 const showPurchasesDialog = ref(false)
 const selectedListForHistory = ref<number | null>(null)
 const showShareDialog = ref(false)
@@ -55,14 +55,14 @@ function handleSearchInput(value: string) {
 }
 
 function handleNewList() {
-  newListError.value = ''
+  newListWarning.value = ''
   dialog.value = true
 }
 
 function handleCreateFromSearch() {
   newListName.value = searchQuery.value.trim()
   searchQuery.value = ''
-  newListError.value = ''
+  newListWarning.value = ''
   dialog.value = true
 }
 
@@ -74,13 +74,13 @@ function createNewList() {
     )
 
     if (existingList) {
-      newListError.value = 'A list with this name already exists'
+      newListWarning.value = 'A list with this name already exists'
       return
     }
 
     listsStore.createList(newListName.value.trim())
     newListName.value = ''
-    newListError.value = ''
+    newListWarning.value = ''
     dialog.value = false
   }
 }
@@ -280,11 +280,11 @@ onMounted(() => {
         <template #actions="{ close }">
           <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
             <BaseNotification
-              v-if="newListError"
+              v-if="newListWarning"
               variant="text"
-              type="error"
-              :message="newListError"
-              :model-value="!!newListError"
+              type="warning"
+              :message="newListWarning"
+              :model-value="!!newListWarning"
             />
           </div>
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
