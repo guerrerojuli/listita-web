@@ -27,21 +27,6 @@ const editingProduct = ref<any>(null)
 const editProductName = ref('')
 const editProductCategoryId = ref<number | null>(null)
 
-const unitOptions = [
-  { title: 'No unit', value: 'none' },
-  { title: 'Unit', value: 'unit' },
-  { title: 'Liters', value: 'liters' },
-  { title: 'Milliliters', value: 'milliliters' },
-  { title: 'Kilograms', value: 'kilograms' },
-  { title: 'Grams', value: 'grams' },
-  { title: 'Volume', value: 'volume' },
-  { title: 'Pack', value: 'pack' },
-  { title: 'Pounds', value: 'pounds' },
-  { title: 'Ounces', value: 'ounces' },
-  { title: 'Centimeters', value: 'centimeters' },
-  { title: 'Meters', value: 'meters' },
-]
-
 const showDeleteDialog = ref(false)
 const deleteProductId = ref<number | null>(null)
 const deleteProductName = ref('')

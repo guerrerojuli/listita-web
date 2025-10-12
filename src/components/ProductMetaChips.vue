@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { formatValueWithUnit } from '@/utils/units'
 import type { Product } from '@/types/api'
 
 interface Props {
@@ -14,16 +13,7 @@ defineProps<Props>()
     <v-chip size="default" class="category-chip" prepend-icon="mdi-tag-outline">
       {{ product.category?.name ?? 'Sin categoría' }}
     </v-chip>
-    <v-chip
-      v-if="formatValueWithUnit((product.metadata as any)?.unitValue, (product.metadata as any)?.unit)"
-      size="default"
-      class="unit-chip"
-      prepend-icon="mdi-ruler"
-    >
-      {{ formatValueWithUnit((product.metadata as any)?.unitValue, (product.metadata as any)?.unit) }}
-    </v-chip>
   </div>
-  
 </template>
 
 <style scoped>
@@ -40,14 +30,4 @@ defineProps<Props>()
   padding: 0 20px !important;
   height: 32px !important;
 }
-
-.unit-chip {
-  background-color: #eeeeee !important;
-  color: #424242 !important;
-  font-weight: 500;
-  padding: 0 20px !important;
-  height: 32px !important;
-}
 </style>
-
-

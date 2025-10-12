@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { toUnitAbbreviation } from '@/utils/units'
 import ProductMetaChips from '@/components/ProductMetaChips.vue'
 import type { Product } from '@/types/api'
 
@@ -13,14 +11,8 @@ interface Emits {
   (e: 'delete'): void
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<Emits>()
-
-const unitLabel = computed(() => {
-  const value = (props.product.metadata as any)?.unit as string | undefined
-  if (!value) return null
-  return toUnitAbbreviation(value)
-})
 </script>
 
 <template>
@@ -32,7 +24,7 @@ const unitLabel = computed(() => {
 
     <div class="product-right">
       <ProductMetaChips :product="product" />
-      
+
       <div class="product-actions">
         <v-btn icon="mdi-pencil-outline" variant="text" size="small" @click.stop="emit('edit')" />
         <v-btn
