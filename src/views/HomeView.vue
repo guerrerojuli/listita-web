@@ -27,6 +27,7 @@ const searchQuery = ref('')
 
 const dialog = ref(false)
 const newListName = ref('')
+const newListDescription = ref('')
 const newListWarning = ref('')
 const showPurchasesDialog = ref(false)
 const selectedListForHistory = ref<number | null>(null)
@@ -38,6 +39,11 @@ const shareLoading = ref(false)
 const showDeleteDialog = ref(false)
 const deleteListId = ref<number | null>(null)
 const deleteListName = ref('')
+
+const showEditListDialog = ref(false)
+const editingListId = ref<number | null>(null)
+const editListName = ref('')
+const editListDescription = ref('')
 
 const filteredRecurrentLists = computed(() => {
   if (!searchQuery.value) return recurrentLists.value
@@ -58,12 +64,15 @@ function handleSearchInput(value: string) {
 }
 
 function handleNewList() {
+  newListName.value = ''
+  newListDescription.value = ''
   newListWarning.value = ''
   dialog.value = true
 }
 
 function handleCreateFromSearch() {
   newListName.value = searchQuery.value.trim()
+  newListDescription.value = ''
   searchQuery.value = ''
   newListWarning.value = ''
   dialog.value = true
@@ -72,8 +81,9 @@ function handleCreateFromSearch() {
 async function createNewList() {
   if (newListName.value.trim()) {
     try {
-      await listsStore.createList(newListName.value.trim())
+      await listsStore.createList(newListName.value.trim(), newListDescription.value.trim() || undefined, false)
       newListName.value = ''
+      newListDescription.value = ''
       newListWarning.value = ''
       dialog.value = false
       showSuccess('List created successfully!')
@@ -122,12 +132,30 @@ async function confirmDeleteList() {
   }
 }
 
-async function handleRenameList(listId: string) {
+function handleRenameList(listId: string) {
   const list = listsStore.lists.find((l) => l.id === Number(listId))
   if (list) {
-    const newName = prompt('New list name:', list.name)
-    if (newName && newName.trim()) {
-      await listsStore.updateList(Number(listId), { name: newName.trim() })
+    editingListId.value = Number(listId)
+    editListName.value = list.name
+    editListDescription.value = list.description || ''
+    showEditListDialog.value = true
+  }
+}
+
+async function confirmEditList() {
+  if (editingListId.value && editListName.value.trim()) {
+    try {
+      await listsStore.updateList(editingListId.value, { 
+        name: editListName.value.trim(),
+        description: editListDescription.value.trim() || undefined
+      })
+      showEditListDialog.value = false
+      editingListId.value = null
+      editListName.value = ''
+      editListDescription.value = ''
+    } catch (err: any) {
+      console.error('Failed to update list:', err)
+      alert('Failed to update list')
     }
   }
 }
@@ -321,6 +349,7 @@ watch(
 
       <BaseDialog v-model="dialog" title="New List">
         <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
+        <BaseInput v-model="newListDescription" label="Description (optional)" class="mt-4" />
 
         <template #actions="{ close }">
           <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
@@ -417,6 +446,33 @@ watch(
         </template>
       </BaseDialog>
 
+      <!-- Edit List Dialog -->
+      <BaseDialog v-model="showEditListDialog" title="Edit List" :max-width="450">
+        <BaseInput
+          v-model="editListName"
+          label="List Name"
+          placeholder="Enter list name"
+          class="mb-4"
+        />
+        <BaseInput
+          v-model="editListDescription"
+          label="Description (optional)"
+          placeholder="Enter list description"
+        />
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!editListName.trim()"
+            @click="confirmEditList"
+          >
+            Save Changes
+          </v-btn>
+        </template>
+      </BaseDialog>
+
       <BaseDialog v-model="showDeleteDialog" title="Delete List" :max-width="450">
         <div class="delete-confirmation">
           <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
@@ -459,12 +515,12 @@ watch(
 }
 
 .new-list-btn {
-  background-color: #999999 !important;
+  background-color: #000000 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #838383 !important;
+  border: 1px solid #000000 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 120px;
@@ -472,7 +528,7 @@ watch(
 }
 
 .new-list-btn:hover {
-  background-color: #757575 !important;
+  background-color: #333333 !important;
   color: white !important;
 }
 

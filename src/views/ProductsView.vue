@@ -26,8 +26,7 @@ const newProductCategoryId = ref<number | null>(null)
 const editingProduct = ref<any>(null)
 const editProductName = ref('')
 const editProductCategoryId = ref<number | null>(null)
-const editProductUnit = ref<string | null>(null)
-const editProductUnitValue = ref<number | null>(null)
+
 const unitOptions = [
   { title: 'No unit', value: 'none' },
   { title: 'Unit', value: 'unit' },
@@ -121,25 +120,15 @@ function handleEditProduct(productId: string) {
     editingProduct.value = product
     editProductName.value = product.name
     editProductCategoryId.value = product.category?.id ?? null
-    editProductUnit.value = (product.metadata as any)?.unit ?? null
-    editProductUnitValue.value = (product.metadata as any)?.unitValue ?? null
     editDialog.value = true
   }
 }
 
 async function updateProduct() {
   if (editingProduct.value && editProductName.value.trim() && editProductCategoryId.value) {
-    const metadata: any = { ...(editingProduct.value.metadata || {}) }
-    if (editProductUnit.value && editProductUnit.value !== 'none')
-      metadata.unit = editProductUnit.value
-    else delete metadata.unit
-    if (editProductUnitValue.value !== null && !Number.isNaN(editProductUnitValue.value))
-      metadata.unitValue = editProductUnitValue.value
-    else delete metadata.unitValue
     await productsStore.updateProduct(editingProduct.value.id, {
       name: editProductName.value.trim(),
       category_id: editProductCategoryId.value,
-      metadata,
     })
     editDialog.value = false
     editingProduct.value = null
@@ -351,16 +340,6 @@ watch(
           label="Category"
           class="mb-4"
         />
-        <div class="form-row">
-          <BaseSelect
-            v-model="editProductUnit"
-            :items="unitOptions"
-            item-title="title"
-            item-value="value"
-            label="Unit"
-          />
-          <BaseInput v-model.number="editProductUnitValue" type="number" label="Value" />
-        </div>
 
         <template #actions>
           <v-btn

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { toUnitAbbreviation, formatProductName } from '@/utils/units'
+import { ref, watch } from 'vue'
+import { toUnitAbbreviation } from '@/utils/units'
 import ProductMetaChips from '@/components/ProductMetaChips.vue'
 import type { ListItem } from '@/types/api'
 
@@ -12,27 +12,56 @@ interface Emits {
   (e: 'toggle-complete'): void
   (e: 'increment'): void
   (e: 'decrement'): void
+  (e: 'update-quantity', quantity: number): void
   (e: 'delete'): void
   (e: 'edit'): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const showMenu = ref(false)
+const editableQuantity = ref(0)
 
 function shortUnit(unit?: string) {
   return unit ? (toUnitAbbreviation(unit) ?? unit) : ''
 }
 
-function displayQuantity(q?: number) {
-  if (typeof q !== 'number' || Number.isNaN(q)) return 0
-  return Math.trunc(q)
+function formatQuantity(qty: number): number {
+  return Math.round(qty * 100) / 100
 }
+
+function updateQuantity() {
+  const newQty = Number(editableQuantity.value)
+  if (!Number.isNaN(newQty) && newQty >= 0) {
+    const roundedQty = formatQuantity(newQty)
+    editableQuantity.value = roundedQty
+    emit('update-quantity', roundedQty)
+  } else {
+    editableQuantity.value = props.item.quantity
+  }
+}
+
+function handleIncrement() {
+  const newQty = formatQuantity(Number(editableQuantity.value) + 1)
+  editableQuantity.value = newQty
+  emit('update-quantity', newQty)
+}
+
+function handleDecrement() {
+  const newQty = formatQuantity(Math.max(0, Number(editableQuantity.value) - 1))
+  editableQuantity.value = newQty
+  emit('update-quantity', newQty)
+}
+
+// Initialize editable quantity when component mounts or item changes
+watch(() => props.item.quantity, (newQty) => {
+  editableQuantity.value = formatQuantity(newQty)
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="product-item" :class="{ 'product-completed': item.purchased }">
+  <div class="product-item" :class="{ 'product-completed': item.purchased }" @click="emit('toggle-complete')">
     <div class="product-checkbox">
       <v-checkbox
         :model-value="item.purchased"
@@ -48,25 +77,40 @@ function displayQuantity(q?: number) {
       </span>
     </div>
 
-    <div class="product-tags" v-if="item.product">
-      <ProductMetaChips :product="item.product" />
-    </div>
-
-    <div class="product-actions">
+    <div class="product-actions" @click.stop>
+      <div class="product-tags" v-if="item.product">
+        <ProductMetaChips :product="item.product" />
+      </div>
+      
       <v-btn
         icon="mdi-minus"
         variant="text"
         size="small"
-        :disabled="item.purchased || item.quantity <= 1"
-        @click="!item.purchased && emit('decrement')"
+        :disabled="item.purchased || editableQuantity <= 1"
+        @click="!item.purchased && handleDecrement()"
       />
-      <span class="product-quantity">{{ displayQuantity(item.quantity) }}</span>
+      <div class="quantity-display">
+        <v-text-field
+          v-model.number="editableQuantity"
+          type="number"
+          step="0.01"
+          min="0"
+          density="compact"
+          variant="outlined"
+          hide-details
+          :disabled="item.purchased"
+          :suffix="shortUnit(item.unit)"
+          class="quantity-input"
+          @blur="updateQuantity"
+          @keyup.enter="updateQuantity"
+        />
+      </div>
       <v-btn
         icon="mdi-plus"
         variant="text"
         size="small"
         :disabled="item.purchased"
-        @click="!item.purchased && emit('increment')"
+        @click="!item.purchased && handleIncrement()"
       />
 
       <v-menu v-model="showMenu" :close-on-content-click="false" location="bottom end">
@@ -148,13 +192,10 @@ function displayQuantity(q?: number) {
 }
 
 .product-tags {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   gap: 0.5rem;
-  pointer-events: none; /* non-interactive display */
+  align-items: center;
+  margin-right: 0.5rem;
 }
 
 .product-completed .product-name {
@@ -169,12 +210,30 @@ function displayQuantity(q?: number) {
   flex-shrink: 0;
 }
 
-.product-quantity {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #212121;
-  min-width: 2rem;
+.quantity-display {
+  display: flex;
+  align-items: center;
+}
+
+.quantity-input {
+  width: 120px;
+}
+
+.quantity-input :deep(.v-field__input) {
   text-align: center;
+  font-weight: 500;
+}
+
+/* Hide number input arrows */
+.quantity-input :deep(input[type='number']::-webkit-outer-spin-button),
+.quantity-input :deep(input[type='number']::-webkit-inner-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-input :deep(input[type='number']) {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .menu-card {

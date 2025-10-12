@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ListItemApi } from '@/api/listItem'
-import type { ListItem as ListItemType } from '@/types/api'
+import { useGlobalProductsStore } from '@/stores/globalProducts'
+import type { ListItem as ListItemType, Product as ProductType, Category as CategoryType } from '@/types/api'
 
 interface ListItemWithListId extends ListItemType {
   listId: number
@@ -19,7 +20,25 @@ export const useProductsStore = defineStore('products', () => {
   }
 
   function mapListItem(data: unknown, listId: number): ListItemWithListId {
-    return { ...(data as ListItemType), listId }
+    const item = data as ListItemType
+    const globalProductsStore = useGlobalProductsStore()
+
+    let enrichedProduct: ProductType = item.product
+
+    // Try to find the full product from global store
+    const fullProduct = globalProductsStore.products.find((p) => p.id === enrichedProduct?.id)
+    if (fullProduct) {
+      enrichedProduct = fullProduct
+    } else if (enrichedProduct?.category?.id) {
+      // If full product not found, but category ID exists, try to enrich category
+      const categoryId = enrichedProduct.category.id
+      const fullCategory: CategoryType | undefined = globalProductsStore.categories.find((c) => c.id === categoryId)
+      if (fullCategory) {
+        enrichedProduct = { ...enrichedProduct, category: fullCategory }
+      }
+    }
+
+    return { ...item, product: enrichedProduct, listId }
   }
 
   async function loadListItems(listId: number, params?: Record<string, unknown>) {

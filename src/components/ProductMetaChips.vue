@@ -11,12 +11,12 @@ defineProps<Props>()
 
 <template>
   <div class="product-categories">
-    <v-chip size="small" class="category-chip" prepend-icon="mdi-tag-outline">
+    <v-chip size="default" class="category-chip" prepend-icon="mdi-tag-outline">
       {{ product.category?.name ?? 'Sin categoría' }}
     </v-chip>
     <v-chip
       v-if="formatValueWithUnit((product.metadata as any)?.unitValue, (product.metadata as any)?.unit)"
-      size="small"
+      size="default"
       class="unit-chip"
       prepend-icon="mdi-ruler"
     >
@@ -37,12 +37,16 @@ defineProps<Props>()
   background-color: #f5f5f5 !important;
   color: #424242 !important;
   font-weight: 500;
+  padding: 0 20px !important;
+  height: 32px !important;
 }
 
 .unit-chip {
   background-color: #eeeeee !important;
   color: #424242 !important;
   font-weight: 500;
+  padding: 0 20px !important;
+  height: 32px !important;
 }
 </style>
 

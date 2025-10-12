@@ -30,17 +30,19 @@ const unitLabel = computed(() => {
       <!-- Price not provided by API spec; keep name/category -->
     </div>
 
-    <ProductMetaChips :product="product" />
-
-    <div class="product-actions">
-      <v-btn icon="mdi-pencil-outline" variant="text" size="small" @click.stop="emit('edit')" />
-      <v-btn
-        icon="mdi-delete-outline"
-        variant="text"
-        size="small"
-        color="error"
-        @click.stop="emit('delete')"
-      />
+    <div class="product-right">
+      <ProductMetaChips :product="product" />
+      
+      <div class="product-actions">
+        <v-btn icon="mdi-pencil-outline" variant="text" size="small" @click.stop="emit('edit')" />
+        <v-btn
+          icon="mdi-delete-outline"
+          variant="text"
+          size="small"
+          color="error"
+          @click.stop="emit('delete')"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -67,7 +69,8 @@ const unitLabel = computed(() => {
   display: flex;
   align-items: center;
   gap: 2rem;
-  min-width: 400px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .product-name {
@@ -75,7 +78,6 @@ const unitLabel = computed(() => {
   font-weight: 600;
   color: #000;
   margin: 0;
-  min-width: 200px;
 }
 
 .product-price {
@@ -84,17 +86,11 @@ const unitLabel = computed(() => {
   color: #424242;
 }
 
-.product-categories {
+.product-right {
   display: flex;
-  gap: 0.5rem;
-  flex: 1;
-  flex-wrap: wrap;
-}
-
-.category-chip {
-  background-color: #f5f5f5 !important;
-  color: #424242 !important;
-  font-weight: 500;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
 }
 
 .product-actions {

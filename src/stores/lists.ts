@@ -90,8 +90,8 @@ export const useListsStore = defineStore('lists', () => {
     }
   }
 
-  async function createList(name: string, recurring: boolean = false) {
-    const shoppingList = new ShoppingList(name, recurring, undefined, '', {})
+  async function createList(name: string, description?: string, recurring: boolean = false) {
+    const shoppingList = new ShoppingList(name, recurring, undefined, description, {})
     await ShoppingListApi.add(shoppingList)
     await fetchLists()
   }

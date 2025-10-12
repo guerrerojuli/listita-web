@@ -49,6 +49,15 @@ const showDeleteDialog = ref(false)
 const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
 
+const showEditItemDialog = ref(false)
+const editingItem = ref<any>(null)
+const editItemUnit = ref<string>('unit')
+const editItemAmount = ref<number>(1)
+
+const showEditListDialog = ref(false)
+const editListName = ref('')
+const editListDescription = ref('')
+
 const showAddProductDialog = ref(false)
 const productSearchQuery = ref('')
 const showCreateProductInDialog = ref(false)
@@ -164,6 +173,10 @@ function handleDecrement(itemId: number) {
   productsStore.decrementQuantity(listId.value, itemId)
 }
 
+function handleUpdateQuantity(itemId: number, quantity: number) {
+  productsStore.updateQuantity(listId.value, itemId, quantity)
+}
+
 function handleDeleteProduct(itemId: number) {
   const item = items.value?.find((i) => i.id === itemId)
   if (item) {
@@ -182,13 +195,55 @@ async function confirmDeleteProduct() {
   }
 }
 
-function handleEditProduct() {}
+function handleEditProduct(itemId: number) {
+  const item = items.value?.find((i) => i.id === itemId)
+  if (item) {
+    editingItem.value = item
+    editItemUnit.value = item.unit || 'unit'
+    editItemAmount.value = item.quantity || 1
+    showEditItemDialog.value = true
+  }
+}
 
-async function handleEditList() {
+async function confirmEditItem() {
+  if (editingItem.value) {
+    try {
+      await productsStore.updateQuantity(
+        listId.value,
+        editingItem.value.id,
+        editItemAmount.value,
+        editItemUnit.value
+      )
+      showEditItemDialog.value = false
+      editingItem.value = null
+    } catch (err: any) {
+      console.error('Failed to update item:', err)
+      alert('Failed to update item')
+    }
+  }
+}
+
+function handleEditList() {
   if (list.value) {
-    const newName = prompt('New list name:', list.value.name)
-    if (newName && newName.trim()) {
-      await listsStore.updateList(listId.value, { name: newName.trim() })
+    editListName.value = list.value.name
+    editListDescription.value = list.value.description || ''
+    showEditListDialog.value = true
+  }
+}
+
+async function confirmEditList() {
+  if (editListName.value.trim()) {
+    try {
+      await listsStore.updateList(listId.value, { 
+        name: editListName.value.trim(),
+        description: editListDescription.value.trim() || undefined
+      })
+      showEditListDialog.value = false
+      editListName.value = ''
+      editListDescription.value = ''
+    } catch (err: any) {
+      console.error('Failed to update list:', err)
+      alert('Failed to update list')
     }
   }
 }
@@ -401,7 +456,10 @@ onMounted(async () => {
         </v-btn>
 
         <div class="d-flex align-center justify-space-between mb-8">
-          <h1 class="page-title">{{ list.name }}</h1>
+          <div class="list-header-info">
+            <h1 class="page-title">{{ list.name }}</h1>
+            <p v-if="list.description" class="list-description">{{ list.description }}</p>
+          </div>
           <div class="header-actions">
             <v-menu>
               <template v-slot:activator="{ props }">
@@ -475,8 +533,9 @@ onMounted(async () => {
             @toggle-complete="handleToggleComplete(item.id)"
             @increment="handleIncrement(item.id)"
             @decrement="handleDecrement(item.id)"
+            @update-quantity="(qty) => handleUpdateQuantity(item.id, qty)"
             @delete="handleDeleteProduct(item.id)"
-            @edit="handleEditProduct()"
+            @edit="handleEditProduct(item.id)"
           />
         </div>
 
@@ -509,6 +568,72 @@ onMounted(async () => {
         <template #actions="{ close }">
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Remove</v-btn>
+        </template>
+      </BaseDialog>
+
+      <!-- Edit Item Dialog -->
+      <BaseDialog v-model="showEditItemDialog" title="Edit Item" :max-width="500">
+        <div v-if="editingItem" class="edit-item-content">
+          <div class="product-info mb-4">
+            <h3 class="product-name">{{ editingItem.product?.name || 'Product' }}</h3>
+            <p class="product-category">{{ editingItem.product?.category?.name || 'No category' }}</p>
+          </div>
+          
+        <div class="form-row">
+          <BaseSelect
+            v-model="editItemUnit"
+            :items="unitOptions"
+            item-title="title"
+            item-value="value"
+            label="Unit"
+          />
+          <BaseInput
+            v-model.number="editItemAmount"
+            type="number"
+            step="0.01"
+            min="0"
+            label="Amount"
+          />
+        </div>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!editItemAmount || editItemAmount <= 0"
+            @click="confirmEditItem"
+          >
+            Save Changes
+          </v-btn>
+        </template>
+      </BaseDialog>
+
+      <!-- Edit List Dialog -->
+      <BaseDialog v-model="showEditListDialog" title="Edit List" :max-width="450">
+        <BaseInput
+          v-model="editListName"
+          label="List Name"
+          placeholder="Enter list name"
+          class="mb-4"
+        />
+        <BaseInput
+          v-model="editListDescription"
+          label="Description (optional)"
+          placeholder="Enter list description"
+        />
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!editListName.trim()"
+            @click="confirmEditList"
+          >
+            Save Changes
+          </v-btn>
         </template>
       </BaseDialog>
 
@@ -692,10 +817,22 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
+.list-header-info {
+  flex: 1;
+}
+
 .page-title {
   font-size: 2.5rem;
   font-weight: 700;
   color: #000;
+  margin: 0;
+}
+
+.list-description {
+  font-size: 1rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.4;
 }
 
 .header-actions {
