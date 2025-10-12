@@ -99,14 +99,43 @@ function handleClickOutside() {
 
 .search-field {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.search-field:focus-within {
+  transform: translateY(-1px) scale(1.005);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.search-field :deep(.v-field),
+.search-field :deep(.v-field__overlay),
+.search-field :deep(.v-field__field),
+.search-field :deep(.v-input__control) {
+  border-radius: 12px !important;
 }
 
 .search-field :deep(.v-field) {
   font-size: 1rem;
+  border: 1px solid #e0e0e0;
+  transition: border-width 0.15s ease;
 }
 
 .search-field :deep(.v-field__input) {
   padding: 1rem 1.25rem;
+}
+
+.search-field :deep(.v-field__outline) {
+  display: none !important;
+}
+
+.search-field :deep(.v-field:hover) {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.search-field :deep(.v-field--focused) {
+  box-shadow: inset 0 0 0 1px #e0e0e0;
 }
 
 .search-results {
