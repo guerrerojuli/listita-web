@@ -188,6 +188,7 @@ async function confirmDeleteProduct() {
   <NavBar />
   <div class="products-view">
     <v-container class="py-8">
+      <h1 class="page-title">Products</h1>
       <div class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
@@ -389,6 +390,14 @@ async function confirmDeleteProduct() {
   min-height: 100vh;
 }
 
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #000;
+  max-width: 900px;
+  margin: 0 auto 2rem auto;
+}
+
 .search-row {
   display: flex;
   align-items: center;
@@ -399,12 +408,12 @@ async function confirmDeleteProduct() {
 }
 
 .add-product-btn {
-  background-color: #c7c7c7 !important;
+  background-color: #999999 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #b9b9b9 !important;
+  border: 1px solid #838383 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 140px;
@@ -412,7 +421,7 @@ async function confirmDeleteProduct() {
 }
 
 .add-product-btn:hover {
-  background-color: #969696 !important;
+  background-color: #757575 !important;
   color: white !important;
 }
 

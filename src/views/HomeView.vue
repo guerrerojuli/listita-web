@@ -65,21 +65,21 @@ function handleCreateFromSearch() {
   dialog.value = true
 }
 
-function createNewList() {
+async function createNewList() {
   if (newListName.value.trim()) {
-    const existingList = listsStore.lists.find(
-      (list) => list.name.toLowerCase() === newListName.value.trim().toLowerCase(),
-    )
-
-    if (existingList) {
-      newListWarning.value = 'A list with this name already exists'
-      return
+    try {
+      await listsStore.createList(newListName.value.trim())
+      newListName.value = ''
+      newListWarning.value = ''
+      dialog.value = false
+      showSuccess('List created successfully!')
+    } catch (err: any) {
+      if (err.message && err.message.includes('already exists')) {
+        newListWarning.value = 'A list with this name already exists or was recently deleted. Please use a different name.'
+      } else {
+        newListWarning.value = err.message || 'Failed to create list'
+      }
     }
-
-    listsStore.createList(newListName.value.trim())
-    newListName.value = ''
-    newListWarning.value = ''
-    dialog.value = false
   }
 }
 
@@ -105,10 +105,16 @@ function handleDeleteList(listId: string) {
 
 async function confirmDeleteList() {
   if (deleteListId.value) {
-    await listsStore.deleteList(deleteListId.value)
-    showDeleteDialog.value = false
-    deleteListId.value = null
-    deleteListName.value = ''
+    try {
+      await listsStore.deleteList(deleteListId.value)
+      showDeleteDialog.value = false
+      deleteListId.value = null
+      deleteListName.value = ''
+      showSuccess('List deleted successfully!')
+    } catch (err: any) {
+      showError(err.message || 'Failed to delete list')
+      showDeleteDialog.value = false
+    }
   }
 }
 
@@ -178,6 +184,7 @@ onMounted(() => {
   <NavBar />
   <div class="home-container">
     <v-container class="py-8">
+      <h1 class="page-title">Lists</h1>
       <div class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
@@ -386,6 +393,14 @@ onMounted(() => {
   min-height: 100vh;
 }
 
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #000;
+  max-width: 900px;
+  margin: 0 auto 2rem auto;
+}
+
 .search-row {
   display: flex;
   align-items: center;
@@ -396,12 +411,12 @@ onMounted(() => {
 }
 
 .new-list-btn {
-  background-color: #c7c7c7 !important;
+  background-color: #999999 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #b9b9b9 !important;
+  border: 1px solid #838383 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 120px;
@@ -409,7 +424,7 @@ onMounted(() => {
 }
 
 .new-list-btn:hover {
-  background-color: #969696 !important;
+  background-color: #757575 !important;
   color: white !important;
 }
 

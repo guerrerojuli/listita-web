@@ -36,15 +36,13 @@ export const useListsStore = defineStore('lists', () => {
 
   async function createList(name: string, recurring: boolean = false) {
     const shoppingList = new ShoppingList(name, recurring, undefined, '', {})
-    const result = await ShoppingListApi.add(shoppingList)
-    const created = mapShoppingList(result as unknown as ShoppingListType)
-    lists.value.unshift(created)
+    await ShoppingListApi.add(shoppingList)
+    await fetchLists()
   }
 
   async function deleteList(id: number) {
     await ShoppingListApi.remove(id)
-    const index = lists.value.findIndex((list) => list.id === id)
-    if (index !== -1) lists.value.splice(index, 1)
+    await fetchLists()
   }
 
   async function getListById(id: number) {
