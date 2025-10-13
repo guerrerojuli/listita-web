@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotification } from '@/composables/useNotification'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { showSuccess } = useNotification()
 
 const name = ref('')
 const surname = ref('')
@@ -13,11 +15,9 @@ const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
-const successMessage = ref('')
 
 async function handleSubmit() {
   errorMessage.value = ''
-  successMessage.value = ''
   
   if (password.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match'
@@ -41,7 +41,8 @@ async function handleSubmit() {
     })
     // Save email so we can resend the verification code if needed
     localStorage.setItem('pending_verification_email', userEmail)
-    successMessage.value = 'Registration successful! A verification email has been sent. Please check your inbox.'
+    // Show success notification
+    showSuccess('Se envió un código de verificación a tu email')
     // Clear form fields
     name.value = ''
     surname.value = ''
@@ -59,7 +60,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthScaffold title="Create an account" :error="errorMessage" :success="successMessage">
+  <AuthScaffold title="Create an account" :error="errorMessage">
     <v-form class="stack" @submit.prevent="handleSubmit">
       <v-text-field v-model="email" label="" placeholder="email@domain.com" type="email" variant="outlined" density="comfortable" class="tall-input" required />
       <v-text-field v-model="name" label="" placeholder="Enter your name" variant="outlined" density="comfortable" class="tall-input" required />
