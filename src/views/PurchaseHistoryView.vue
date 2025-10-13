@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
 import { usePurchasesStore } from '@/stores/purchases'
 import { useNotification } from '@/composables/useNotification'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
 const purchasesStore = usePurchasesStore()
-const { purchases, loading } = storeToRefs(purchasesStore)
+const { purchases, loading, hasMore, loadingMore } = storeToRefs(purchasesStore)
 const { showSuccess, showError } = useNotification()
 
 const searchQuery = ref('')
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const sortedPurchases = computed(() => {
   return [...purchases.value].sort((a, b) => {
@@ -42,9 +44,26 @@ async function handleRestorePurchase(purchaseId: number) {
   }
 }
 
+const { setupObserver } = useInfiniteScroll({
+  trigger: loadMoreTrigger,
+  hasMore,
+  loadingMore,
+  onLoadMore: () => purchasesStore.loadMorePurchases(),
+})
+
 onMounted(() => {
   purchasesStore.fetchPurchases()
+  setupObserver()
 })
+
+watch(
+  () => filteredPurchases.value.length,
+  (newLength) => {
+    if (newLength > 0) {
+      setupObserver()
+    }
+  },
+)
 </script>
 
 <template>
@@ -80,53 +99,67 @@ onMounted(() => {
       </div>
 
       <div
-        v-else
-        class="purchases-grid"
+        v-if="filteredPurchases.length > 0"
+        class="mb-10"
         style="max-width: 900px; margin-left: auto; margin-right: auto"
       >
-        <div v-for="purchase in filteredPurchases" :key="purchase.id" class="purchase-card">
-          <div class="purchase-card-content">
-            <div class="purchase-card-info">
-              <div class="purchase-card-title-row">
-                <h3 class="purchase-card-title">{{ purchase.list.name }}</h3>
+        <div class="purchases-grid">
+          <div v-for="purchase in filteredPurchases" :key="purchase.id" class="purchase-card">
+            <div class="purchase-card-content">
+              <div class="purchase-card-info">
+                <div class="purchase-card-title-row">
+                  <h3 class="purchase-card-title">{{ purchase.list.name }}</h3>
+                </div>
+                <p v-if="purchase.list.description" class="purchase-card-description">
+                  {{ purchase.list.description }}
+                </p>
+                <p class="purchase-card-subtitle">
+                  {{ purchase.items?.length || 0 }} items • Purchased on
+                  {{ new Date(purchase.createdAt || '').toLocaleDateString() }}
+                </p>
               </div>
-              <p v-if="purchase.list.description" class="purchase-card-description">
-                {{ purchase.list.description }}
-              </p>
-              <p class="purchase-card-subtitle">
-                {{ purchase.items?.length || 0 }} items • Purchased on
-                {{ new Date(purchase.createdAt || '').toLocaleDateString() }}
-              </p>
+
+              <v-menu :close-on-content-click="false" location="bottom end" offset="8">
+                <template v-slot:activator="{ props: menuProps }">
+                  <v-btn
+                    icon="mdi-dots-vertical"
+                    variant="text"
+                    size="small"
+                    class="menu-button"
+                    v-bind="menuProps"
+                    @click.stop
+                  />
+                </template>
+
+                <v-card min-width="220" class="menu-card" elevation="8">
+                  <v-list class="menu-list" density="compact">
+                    <v-list-item
+                      @click="handleRestorePurchase(purchase.id)"
+                      class="menu-item"
+                      rounded="lg"
+                    >
+                      <template v-slot:prepend>
+                        <v-icon icon="mdi-restore" size="20" class="menu-icon" />
+                      </template>
+                      <v-list-item-title class="menu-text">Restore</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-card>
+              </v-menu>
             </div>
-
-            <v-menu :close-on-content-click="false" location="bottom end" offset="8">
-              <template v-slot:activator="{ props: menuProps }">
-                <v-btn
-                  icon="mdi-dots-vertical"
-                  variant="text"
-                  size="small"
-                  class="menu-button"
-                  v-bind="menuProps"
-                  @click.stop
-                />
-              </template>
-
-              <v-card min-width="220" class="menu-card" elevation="8">
-                <v-list class="menu-list" density="compact">
-                  <v-list-item
-                    @click="handleRestorePurchase(purchase.id)"
-                    class="menu-item"
-                    rounded="lg"
-                  >
-                    <template v-slot:prepend>
-                      <v-icon icon="mdi-restore" size="20" class="menu-icon" />
-                    </template>
-                    <v-list-item-title class="menu-text">Restore</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-card>
-            </v-menu>
           </div>
+        </div>
+      </div>
+
+      <!-- Infinite scroll trigger -->
+      <div
+        v-if="filteredPurchases.length > 0 && !searchQuery"
+        ref="loadMoreTrigger"
+        class="load-more-trigger"
+        style="max-width: 900px; margin-left: auto; margin-right: auto"
+      >
+        <div v-if="loadingMore" class="text-center py-4">
+          <v-progress-circular indeterminate color="primary" size="32" />
         </div>
       </div>
     </v-container>
@@ -278,5 +311,13 @@ onMounted(() => {
 .menu-divider {
   margin: 0;
   border-color: rgba(0, 0, 0, 0.08);
+}
+
+.load-more-trigger {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
 }
 </style>
