@@ -3,6 +3,7 @@ import { onMounted, computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { usePurchasesStore } from '@/stores/purchases'
 import { useNotification } from '@/composables/useNotification'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
@@ -13,6 +14,8 @@ const { showSuccess, showError } = useNotification()
 
 const searchQuery = ref('')
 const loadMoreTrigger = ref<HTMLElement | null>(null)
+const showRestoreDialog = ref(false)
+const restorePurchaseId = ref<number | null>(null)
 
 const sortedPurchases = computed(() => {
   return [...purchases.value].sort((a, b) => {
@@ -33,10 +36,15 @@ function handleSearchInput(value: string) {
   searchQuery.value = value
 }
 
-async function handleRestorePurchase(purchaseId: number) {
-  if (confirm('Restore this purchase as a new shopping list?')) {
+function handleRestorePurchase(purchaseId: number) {
+  restorePurchaseId.value = purchaseId
+  showRestoreDialog.value = true
+}
+
+async function confirmRestore() {
+  if (restorePurchaseId.value) {
     try {
-      await purchasesStore.restorePurchase(purchaseId)
+      await purchasesStore.restorePurchase(restorePurchaseId.value)
       showSuccess('Purchase restored successfully!')
     } catch {
       showError('Failed to restore purchase')
@@ -162,6 +170,15 @@ watch(
           <v-progress-circular indeterminate color="primary" size="32" />
         </div>
       </div>
+
+      <ConfirmDialog
+        v-model="showRestoreDialog"
+        title="Restore Purchase"
+        message="Restore this purchase as a new shopping list? This will create a new list with all the items from this purchase."
+        confirm-text="Restore"
+        variant="success"
+        @confirm="confirmRestore"
+      />
     </v-container>
   </div>
 </template>

@@ -9,6 +9,8 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { useNotification } from '@/composables/useNotification'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
@@ -23,6 +25,7 @@ const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
 const authStore = useAuthStore()
+const { showSuccess, showError } = useNotification()
 
 const { hasMore, loadingMore } = storeToRefs(productsStore)
 
@@ -82,6 +85,13 @@ const showUnitQuantityDialog = ref(false)
 const selectedProductToAdd = ref<Product | null>(null)
 const addQuantity = ref(1)
 const addUnit = ref<string>('unit')
+
+const showPurchaseDialog = ref(false)
+const showResetDialog = ref(false)
+const showShareDialog = ref(false)
+const shareEmail = ref('')
+const shareError = ref('')
+const shareLoading = ref(false)
 
 const unitOptions = [
   { title: 'No unit', value: 'none' },
@@ -179,7 +189,7 @@ async function confirmEditItem() {
       editingItem.value = null
     } catch (err: unknown) {
       console.error('Failed to update item:', err)
-      alert('Failed to update item')
+      showError('Failed to update item')
     }
   }
 }
@@ -204,41 +214,73 @@ async function confirmEditList() {
       editListDescription.value = ''
     } catch (err: unknown) {
       console.error('Failed to update list:', err)
-      alert('Failed to update list')
+      showError('Failed to update list')
     }
   }
 }
 
-async function handlePurchaseList() {
-  if (confirm('Mark this list as purchased? This will save it to history.')) {
-    try {
-      await listsStore.purchaseList(listId.value)
-      alert('List purchased successfully!')
-      router.push('/')
-    } catch (err: unknown) {
-      alert((err as Error)?.message || 'Failed to purchase list')
-    }
+function handlePurchaseList() {
+  showPurchaseDialog.value = true
+}
+
+async function confirmPurchase() {
+  try {
+    await listsStore.purchaseList(listId.value)
+    showSuccess('List purchased successfully!')
+    router.push('/')
+  } catch (err: unknown) {
+    showError((err as Error)?.message || 'Failed to purchase list')
   }
 }
 
-async function handleResetList() {
-  if (confirm('Reset all items to unpurchased?')) {
+function handleResetList() {
+  showResetDialog.value = true
+}
+
+async function confirmReset() {
+  try {
+    await listsStore.resetListItems(listId.value)
+    await productsStore.loadListItems(listId.value)
+    showSuccess('List items reset successfully!')
+  } catch {
+    showError('Failed to reset list')
+  }
+}
+
+async function handleToggleRecurrent() {
+  if (list.value) {
     try {
-      await listsStore.resetListItems(listId.value)
-      await productsStore.loadListItems(listId.value)
+      await listsStore.updateList(listId.value, { recurring: !list.value.recurring })
+      showSuccess(
+        list.value.recurring ? 'Removed from recurring lists' : 'Added to recurring lists',
+      )
     } catch {
-      alert('Failed to reset list')
+      showError('Failed to update list')
     }
   }
 }
 
 function handleShareList() {
-  const email = prompt('Enter email address to share with:')
-  if (email && email.trim()) {
-    listsStore
-      .shareList(listId.value, email.trim())
-      .then(() => alert('List shared successfully!'))
-      .catch(() => alert('Failed to share list'))
+  shareEmail.value = ''
+  shareError.value = ''
+  shareLoading.value = false
+  showShareDialog.value = true
+}
+
+async function submitShareList() {
+  if (shareEmail.value.trim() && !shareLoading.value) {
+    shareLoading.value = true
+    shareError.value = ''
+    try {
+      await listsStore.shareList(listId.value, shareEmail.value.trim())
+      shareEmail.value = ''
+      shareLoading.value = false
+      showShareDialog.value = false
+      showSuccess('List shared successfully!')
+    } catch (err: any) {
+      shareError.value = err.message || 'Failed to share list'
+      shareLoading.value = false
+    }
   }
 }
 
@@ -265,7 +307,7 @@ async function confirmAddProduct() {
     } catch (err: unknown) {
       console.error('Failed to add product:', err)
       const errorMessage = (err as Error)?.message || 'Failed to add product to list'
-      alert(`Failed to add product: ${errorMessage}`)
+      showError(`Failed to add product: ${errorMessage}`)
     }
   }
 }
@@ -321,7 +363,7 @@ async function createAndAddProduct() {
       newProductCategoryId.value = null
     } catch (err: unknown) {
       console.error('Failed to create product:', err)
-      alert('Failed to create product')
+      showError('Failed to create product')
     }
   }
 }
@@ -417,37 +459,86 @@ onMounted(async () => {
             <p v-if="list.description" class="list-description">{{ list.description }}</p>
           </div>
           <div class="header-actions">
-            <v-menu>
-              <template v-slot:activator="{ props }">
-                <v-btn icon="mdi-dots-vertical" variant="text" v-bind="props" />
+            <v-menu :close-on-content-click="false" location="bottom end" offset="8">
+              <template v-slot:activator="{ props: menuProps }">
+                <v-btn
+                  icon="mdi-dots-vertical"
+                  variant="text"
+                  size="small"
+                  class="menu-button"
+                  v-bind="menuProps"
+                />
               </template>
-              <v-list>
-                <v-list-item v-if="isOwner" @click="handleEditList">
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-pencil-outline" />
-                  </template>
-                  <v-list-item-title>Edit</v-list-item-title>
-                </v-list-item>
-                <v-list-item v-if="isOwner" @click="handleShareList">
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-share-variant-outline" />
-                  </template>
-                  <v-list-item-title>Share</v-list-item-title>
-                </v-list-item>
-                <v-divider v-if="isOwner" />
-                <v-list-item v-if="isOwner" @click="handleResetList">
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-refresh" />
-                  </template>
-                  <v-list-item-title>Reset Items</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="handlePurchaseList">
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-cart-check" />
-                  </template>
-                  <v-list-item-title>Mark as Purchased</v-list-item-title>
-                </v-list-item>
-              </v-list>
+
+              <v-card min-width="220" class="menu-card" elevation="8">
+                <v-list class="menu-list" density="compact">
+                  <v-list-item
+                    v-if="isOwner"
+                    @click="handleToggleRecurrent"
+                    class="menu-item menu-item-recurring"
+                    rounded="lg"
+                  >
+                    <template v-slot:prepend>
+                      <v-icon
+                        :icon="list.recurring ? 'mdi-star' : 'mdi-star-outline'"
+                        size="20"
+                        class="menu-icon"
+                        :class="{ 'menu-icon-active': list.recurring }"
+                      />
+                    </template>
+                    <v-list-item-title class="menu-text">
+                      {{ list.recurring ? 'Remove from Recurring' : 'Mark as Recurring' }}
+                    </v-list-item-title>
+                  </v-list-item>
+
+                  <v-divider v-if="isOwner" class="menu-divider" />
+
+                  <v-list-item
+                    v-if="isOwner"
+                    @click="handleEditList"
+                    class="menu-item"
+                    rounded="lg"
+                  >
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
+                    </template>
+                    <v-list-item-title class="menu-text">Edit</v-list-item-title>
+                  </v-list-item>
+
+                  <v-list-item
+                    v-if="isOwner"
+                    @click="handleShareList"
+                    class="menu-item"
+                    rounded="lg"
+                  >
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-share-variant-outline" size="20" class="menu-icon" />
+                    </template>
+                    <v-list-item-title class="menu-text">Share</v-list-item-title>
+                  </v-list-item>
+
+                  <v-divider v-if="isOwner" class="menu-divider" />
+
+                  <v-list-item
+                    v-if="isOwner"
+                    @click="handleResetList"
+                    class="menu-item"
+                    rounded="lg"
+                  >
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-refresh" size="20" class="menu-icon" />
+                    </template>
+                    <v-list-item-title class="menu-text">Reset Items</v-list-item-title>
+                  </v-list-item>
+
+                  <v-list-item @click="handlePurchaseList" class="menu-item" rounded="lg">
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-cart-check" size="20" class="menu-icon" />
+                    </template>
+                    <v-list-item-title class="menu-text">Mark as Purchased</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-card>
             </v-menu>
           </div>
         </div>
@@ -755,6 +846,57 @@ onMounted(async () => {
           </v-btn>
         </template>
       </BaseDialog>
+
+      <!-- Share Dialog -->
+      <BaseDialog v-model="showShareDialog" title="Share List" :max-width="450">
+        <BaseInput
+          v-model="shareEmail"
+          label="Email address"
+          type="email"
+          placeholder="Enter email to share with"
+          @keyup.enter="submitShareList"
+        />
+
+        <template #actions="{ close }">
+          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
+            <BaseNotification
+              v-if="shareError"
+              variant="text"
+              type="error"
+              :message="shareError"
+              :model-value="!!shareError"
+            />
+          </div>
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!shareEmail.trim() || shareLoading"
+            :loading="shareLoading"
+            @click="submitShareList"
+          >
+            Share
+          </v-btn>
+        </template>
+      </BaseDialog>
+
+      <ConfirmDialog
+        v-model="showPurchaseDialog"
+        title="Mark as Purchased"
+        message="Mark this list as purchased? This will save it to history."
+        confirm-text="Mark as Purchased"
+        variant="success"
+        @confirm="confirmPurchase"
+      />
+
+      <ConfirmDialog
+        v-model="showResetDialog"
+        title="Reset Items"
+        message="Reset all items to unpurchased? This will uncheck all items in the list."
+        confirm-text="Reset Items"
+        variant="default"
+        @confirm="confirmReset"
+      />
     </v-container>
   </div>
 </template>
@@ -991,5 +1133,82 @@ onMounted(async () => {
   color: #212121;
   margin-bottom: 1.5rem;
   text-align: center;
+}
+
+.menu-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.menu-button:hover {
+  opacity: 1;
+}
+
+.menu-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.menu-list {
+  padding: 0.5rem;
+  background: white;
+}
+
+.menu-list :deep(.v-list-item) {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+.menu-item {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 0.5rem 0.75rem !important;
+  transition: all 0.15s ease;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.menu-item:active {
+  background-color: #eeeeee !important;
+}
+
+.menu-icon {
+  color: #616161;
+  transition: color 0.15s ease;
+}
+
+.menu-icon-active {
+  color: #ffa726 !important;
+}
+
+.menu-item:hover .menu-icon {
+  color: #424242;
+}
+
+.menu-item:hover .menu-icon-active {
+  color: #ffb74d !important;
+}
+
+.menu-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #212121;
+  letter-spacing: -0.01em;
+}
+
+.menu-item-recurring:hover {
+  background-color: #fff3cd !important;
+}
+
+.menu-item-recurring:hover .menu-icon {
+  color: #ffa726 !important;
+}
+
+.menu-divider {
+  margin: 0;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 </style>

@@ -9,6 +9,7 @@ import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useListsStore } from '@/stores/lists'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
@@ -44,6 +45,9 @@ const showEditListDialog = ref(false)
 const editingListId = ref<number | null>(null)
 const editListName = ref('')
 const editListDescription = ref('')
+
+const showPurchaseDialog = ref(false)
+const purchaseListId = ref<string | null>(null)
 
 const filteredRecurrentLists = computed(() => {
   if (!searchQuery.value) return recurrentLists.value
@@ -179,7 +183,7 @@ async function confirmEditList() {
       editListDescription.value = ''
     } catch (err: any) {
       console.error('Failed to update list:', err)
-      alert('Failed to update list')
+      showError('Failed to update list')
     }
   }
 }
@@ -228,10 +232,15 @@ async function handleRemoveUser(userId: number) {
   }
 }
 
-async function handlePurchaseList(listId: string) {
-  if (confirm('Mark this list as purchased? This will save it to history.')) {
+function handlePurchaseList(listId: string) {
+  purchaseListId.value = listId
+  showPurchaseDialog.value = true
+}
+
+async function confirmPurchase() {
+  if (purchaseListId.value) {
     try {
-      await listsStore.purchaseList(Number(listId))
+      await listsStore.purchaseList(Number(purchaseListId.value))
       showSuccess('List purchased successfully!')
     } catch (err: any) {
       showError(err.message || 'Failed to purchase list')
@@ -545,6 +554,15 @@ watch(
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteList">Delete</v-btn>
         </template>
       </BaseDialog>
+
+      <ConfirmDialog
+        v-model="showPurchaseDialog"
+        title="Mark as Purchased"
+        message="Mark this list as purchased? This will save it to history."
+        confirm-text="Mark as Purchased"
+        variant="success"
+        @confirm="confirmPurchase"
+      />
     </v-container>
   </div>
 </template>
