@@ -551,12 +551,11 @@ watch(
 }
 
 .new-list-btn {
-  background-color: #999999 !important;
+  background-color: #000 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #838383 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 120px;
@@ -564,7 +563,7 @@ watch(
 }
 
 .new-list-btn:hover {
-  background-color: #757575 !important;
+  background-color: #1a1a1a !important;
   color: white !important;
 }
 
