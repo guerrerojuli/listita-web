@@ -25,10 +25,6 @@ export const useListsStore = defineStore('lists', () => {
     return list.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   }
 
-  function mapShoppingList(data: ShoppingListType): ShoppingListType {
-    return data
-  }
-
   function getErrorMessage(err: any): string {
     if (!err) return 'Something went wrong. Please try again.'
 
@@ -57,7 +53,7 @@ export const useListsStore = defineStore('lists', () => {
 
     try {
       const result = await ShoppingListApi.getAll(undefined, { ...params, page: 1, per_page: 10 })
-      lists.value = result.data.map((list) => mapShoppingList(list as unknown as ShoppingListType))
+      lists.value = result.data as ShoppingListType[]
       hasMore.value = result.pagination?.has_next ?? false
     } catch (err: any) {
       error.value = getErrorMessage(err)
@@ -80,9 +76,7 @@ export const useListsStore = defineStore('lists', () => {
         page: currentPage.value,
         per_page: 10,
       })
-      const newLists = result.data.map((list) =>
-        mapShoppingList(list as unknown as ShoppingListType),
-      )
+      const newLists = result.data as ShoppingListType[]
 
       lists.value = [...lists.value, ...newLists]
       hasMore.value = result.pagination?.has_next ?? false
@@ -107,7 +101,7 @@ export const useListsStore = defineStore('lists', () => {
 
   async function getListById(id: number) {
     const result = await ShoppingListApi.get(id)
-    return mapShoppingList(result as unknown as ShoppingListType)
+    return result as ShoppingListType
   }
 
   async function updateList(
@@ -122,7 +116,7 @@ export const useListsStore = defineStore('lists', () => {
     const list = await ShoppingListApi.get(id)
     const updatedList = Object.assign(list, updates)
     const result = await ShoppingListApi.modify(updatedList)
-    const updated = mapShoppingList(result as unknown as ShoppingListType)
+    const updated = result as ShoppingListType
     const index = lists.value.findIndex((list) => list.id === id)
     if (index !== -1) lists.value[index] = updated
     return updated
@@ -144,7 +138,7 @@ export const useListsStore = defineStore('lists', () => {
   async function shareList(id: number, email: string) {
     await ShoppingListApi.share(id, email)
     const updatedList = await ShoppingListApi.get(id)
-    const mapped = mapShoppingList(updatedList as unknown as ShoppingListType)
+    const mapped = updatedList as ShoppingListType
     const index = lists.value.findIndex((list) => list.id === id)
     if (index !== -1) {
       lists.value.splice(index, 1, mapped)
@@ -158,7 +152,7 @@ export const useListsStore = defineStore('lists', () => {
   async function revokeAccess(listId: number, userId: number) {
     await ShoppingListApi.revokeAccess(listId, userId)
     const updatedList = await ShoppingListApi.get(listId)
-    const mapped = mapShoppingList(updatedList as unknown as ShoppingListType)
+    const mapped = updatedList as ShoppingListType
     const index = lists.value.findIndex((list) => list.id === listId)
     if (index !== -1) {
       lists.value.splice(index, 1, mapped)
