@@ -53,12 +53,24 @@ const router = createRouter({
       component: () => import('@/views/ProductsView.vue'),
       meta: { title: 'Products' },
     },
+    {
+      path: '/purchases',
+      name: 'purchases',
+      component: () => import('@/views/PurchaseHistoryView.vue'),
+      meta: { title: 'Purchase History' },
+    },
   ],
 })
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const publicRoutes = new Set(['/login', '/register', '/verify', '/forgot-password', '/reset-password'])
+  const publicRoutes = new Set([
+    '/login',
+    '/register',
+    '/verify',
+    '/forgot-password',
+    '/reset-password',
+  ])
   if (!publicRoutes.has(to.path) && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

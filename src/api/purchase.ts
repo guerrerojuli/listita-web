@@ -58,25 +58,28 @@ class PurchaseApi {
 class Purchase {
   id: number
   metadata?: Record<string, unknown> | null
-  owner: User
+  owner?: User
   list: ShoppingList
-  listItemArray: ListItem[]
+  items: ListItem[]
   createdAt?: string
+  updatedAt?: string
 
   constructor(
     id: number,
-    owner: User,
     list: ShoppingList,
-    listItemArray: ListItem[],
+    items: ListItem[],
     metadata?: Record<string, unknown> | null,
+    owner?: User,
     createdAt?: string,
+    updatedAt?: string,
   ) {
     this.id = id
     this.owner = owner
     this.list = list
-    this.listItemArray = listItemArray
+    this.items = items
     this.metadata = metadata
     this.createdAt = createdAt
+    this.updatedAt = updatedAt
   }
 
   toString(): string {

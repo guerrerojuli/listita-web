@@ -123,12 +123,20 @@ async function handleChangePassword() {
           <v-icon size="20" class="sidebar-link-icon">mdi-package-variant</v-icon>
           <span>Products</span>
         </RouterLink>
+        <RouterLink to="/purchases" class="sidebar-link" active-class="sidebar-link-active">
+          <v-icon size="20" class="sidebar-link-icon">mdi-history</v-icon>
+          <span>Purchase History</span>
+        </RouterLink>
       </nav>
 
       <div v-if="auth.isAuthenticated && !hasError" class="sidebar-footer">
         <v-menu v-model="showProfileMenu" location="top" :close-on-content-click="false">
           <template v-slot:activator="{ props }">
-            <div class="user-profile sidebar-link" :class="{ 'sidebar-link-active': showProfileMenu }" v-bind="props">
+            <div
+              class="user-profile sidebar-link"
+              :class="{ 'sidebar-link-active': showProfileMenu }"
+              v-bind="props"
+            >
               <v-avatar color="grey-lighten-1" size="32">
                 <v-icon icon="mdi-account" size="20" />
               </v-avatar>

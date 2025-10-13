@@ -8,8 +8,10 @@ import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ListFormDialog from '@/components/ListFormDialog.vue'
 import { useListsStore } from '@/stores/lists'
-import { usePurchasesStore } from '@/stores/purchases'
+import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
@@ -17,7 +19,7 @@ const router = useRouter()
 const { showSuccess, showError, showWarning } = useNotification()
 
 const listsStore = useListsStore()
-const purchasesStore = usePurchasesStore()
+const authStore = useAuthStore()
 const { recurrentLists, activeLists, loading, error, hasMore, loadingMore } =
   storeToRefs(listsStore)
 
@@ -28,9 +30,8 @@ const searchQuery = ref('')
 const dialog = ref(false)
 const newListName = ref('')
 const newListDescription = ref('')
+const newListRecurring = ref(false)
 const newListWarning = ref('')
-const showPurchasesDialog = ref(false)
-const selectedListForHistory = ref<number | null>(null)
 const showShareDialog = ref(false)
 const shareEmail = ref('')
 const shareListId = ref<number | null>(null)
@@ -44,6 +45,10 @@ const showEditListDialog = ref(false)
 const editingListId = ref<number | null>(null)
 const editListName = ref('')
 const editListDescription = ref('')
+const editListRecurring = ref(false)
+
+const showPurchaseDialog = ref(false)
+const purchaseListId = ref<string | null>(null)
 
 const filteredRecurrentLists = computed(() => {
   if (!searchQuery.value) return recurrentLists.value
@@ -59,9 +64,39 @@ const filteredActiveLists = computed(() => {
   )
 })
 
+const currentShareList = computed(() => {
+  if (!shareListId.value) return null
+  return listsStore.lists.find((l) => l.id === shareListId.value)
+})
+
+const isOwner = computed(() => {
+  if (!currentShareList.value || !authStore.user) return false
+  return currentShareList.value.owner?.id === authStore.user.id
+})
+
+function isListOwner(listId: number): boolean {
+  const list = listsStore.lists.find((l) => l.id === listId)
+  if (!list || !authStore.user) return false
+  return list.owner?.id === authStore.user.id
+}
+
+function handleSearchInput(value: string) {
+  searchQuery.value = value
+}
+
 function handleNewList() {
   newListName.value = ''
   newListDescription.value = ''
+  newListRecurring.value = false
+  newListWarning.value = ''
+  dialog.value = true
+}
+
+function handleCreateFromSearch() {
+  newListName.value = searchQuery.value.trim()
+  newListDescription.value = ''
+  newListRecurring.value = false
+  searchQuery.value = ''
   newListWarning.value = ''
   dialog.value = true
 }
@@ -69,15 +104,21 @@ function handleNewList() {
 async function createNewList() {
   if (newListName.value.trim()) {
     try {
-      await listsStore.createList(newListName.value.trim(), newListDescription.value.trim() || undefined, false)
+      await listsStore.createList(
+        newListName.value.trim(),
+        newListDescription.value?.trim() || '',
+        newListRecurring.value,
+      )
       newListName.value = ''
       newListDescription.value = ''
+      newListRecurring.value = false
       newListWarning.value = ''
       dialog.value = false
       showSuccess('List created successfully!')
     } catch (err: any) {
       if (err.message && err.message.includes('already exists')) {
-        newListWarning.value = 'A list with this name already exists or was recently deleted. Please use a different name.'
+        newListWarning.value =
+          'A list with this name already exists or was recently deleted. Please use a different name.'
       } else {
         newListWarning.value = err.message || 'Failed to create list'
       }
@@ -126,6 +167,7 @@ function handleRenameList(listId: string) {
     editingListId.value = Number(listId)
     editListName.value = list.name
     editListDescription.value = list.description || ''
+    editListRecurring.value = list.recurring || false
     showEditListDialog.value = true
   }
 }
@@ -133,23 +175,21 @@ function handleRenameList(listId: string) {
 async function confirmEditList() {
   if (editingListId.value && editListName.value.trim()) {
     try {
-      await listsStore.updateList(editingListId.value, { 
+      await listsStore.updateList(editingListId.value, {
         name: editListName.value.trim(),
-        description: editListDescription.value.trim() || undefined
+        description: editListDescription.value?.trim() || '',
+        recurring: editListRecurring.value,
       })
       showEditListDialog.value = false
       editingListId.value = null
       editListName.value = ''
       editListDescription.value = ''
+      editListRecurring.value = false
     } catch (err: any) {
       console.error('Failed to update list:', err)
-      alert('Failed to update list')
+      showError('Failed to update list')
     }
   }
-}
-
-function handleTogglePrivate(listId: string) {
-  console.log('Toggle private for list:', listId)
 }
 
 function handleShareList(listId: string) {
@@ -166,7 +206,7 @@ async function submitShareList() {
     shareError.value = ''
     try {
       await listsStore.shareList(shareListId.value, shareEmail.value.trim())
-      showShareDialog.value = false
+      shareEmail.value = ''
       shareLoading.value = false
       showSuccess('List shared successfully!')
     } catch (err: any) {
@@ -176,21 +216,38 @@ async function submitShareList() {
   }
 }
 
-function handleViewPurchaseHistory(listId: string) {
-  selectedListForHistory.value = Number(listId)
-  purchasesStore.fetchPurchases({ list_id: Number(listId) })
-  showPurchasesDialog.value = true
+async function handleRemoveUser(userId: number) {
+  if (!shareListId.value || !currentShareList.value) return
+  try {
+    // Optimistically update UI
+    if (currentShareList.value.sharedWith) {
+      const index = currentShareList.value.sharedWith.findIndex((u) => u.id === userId)
+      if (index !== -1) {
+        currentShareList.value.sharedWith.splice(index, 1)
+      }
+    }
+
+    await listsStore.revokeAccess(shareListId.value, userId)
+    showSuccess('User removed successfully!')
+  } catch (err: any) {
+    // Revert on error - reload the list
+    await listsStore.fetchLists()
+    showError(err.message || 'Failed to remove user')
+  }
 }
 
-async function handleRestorePurchase(purchaseId: number) {
-  if (confirm('Restore this purchase as a new shopping list?')) {
+function handlePurchaseList(listId: string) {
+  purchaseListId.value = listId
+  showPurchaseDialog.value = true
+}
+
+async function confirmPurchase() {
+  if (purchaseListId.value) {
     try {
-      await purchasesStore.restorePurchase(purchaseId)
-      await listsStore.fetchLists()
-      showPurchasesDialog.value = false
-      showSuccess('Purchase restored successfully!')
-    } catch (err) {
-      showError('Failed to restore purchase')
+      await listsStore.purchaseList(Number(purchaseListId.value))
+      showSuccess('List purchased successfully!')
+    } catch (err: any) {
+      showError(err.message || 'Failed to purchase list')
     }
   }
 }
@@ -247,13 +304,13 @@ watch(
             :key="list.id"
             :list="list"
             :is-highlighted="true"
+            :is-owner="isListOwner(list.id)"
             @click="handleListClick(String(list.id))"
             @toggle-recurrent="handleToggleRecurrent(String(list.id))"
             @delete="handleDeleteList(String(list.id))"
             @rename="handleRenameList(String(list.id))"
-            @toggle-private="handleTogglePrivate(String(list.id))"
             @share="handleShareList(String(list.id))"
-            @view-history="handleViewPurchaseHistory(String(list.id))"
+            @purchase="handlePurchaseList(String(list.id))"
           />
         </div>
       </div>
@@ -269,13 +326,13 @@ watch(
             v-for="list in filteredActiveLists"
             :key="list.id"
             :list="list"
+            :is-owner="isListOwner(list.id)"
             @click="handleListClick(String(list.id))"
             @toggle-recurrent="handleToggleRecurrent(String(list.id))"
             @delete="handleDeleteList(String(list.id))"
             @rename="handleRenameList(String(list.id))"
-            @toggle-private="handleTogglePrivate(String(list.id))"
             @share="handleShareList(String(list.id))"
-            @view-history="handleViewPurchaseHistory(String(list.id))"
+            @purchase="handlePurchaseList(String(list.id))"
           />
         </div>
       </div>
@@ -327,81 +384,81 @@ watch(
         <p class="text-body-2 text-medium-emphasis mb-4">Try a different search term</p>
       </div>
 
-      <BaseDialog v-model="dialog" title="New List">
-        <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
-        <BaseInput v-model="newListDescription" label="Description (optional)" class="mt-4" />
+      <ListFormDialog
+        v-model="dialog"
+        title="New List"
+        :name="newListName"
+        :description="newListDescription"
+        :recurring="newListRecurring"
+        confirm-text="Create"
+        :error-message="newListWarning"
+        @update:name="newListName = $event"
+        @update:description="newListDescription = $event"
+        @update:recurring="newListRecurring = $event"
+        @confirm="createNewList"
+      />
 
-        <template #actions="{ close }">
-          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
-            <BaseNotification
-              v-if="newListWarning"
-              variant="text"
-              type="warning"
-              :message="newListWarning"
-              :model-value="!!newListWarning"
-            />
+      <BaseDialog
+        v-model="showShareDialog"
+        :title="isOwner ? 'Share List' : 'Shared With'"
+        :max-width="500"
+      >
+        <div v-if="currentShareList">
+          <h3 class="share-list-name">{{ currentShareList.name }}</h3>
+
+          <BaseInput
+            v-if="isOwner"
+            v-model="shareEmail"
+            label="Email address"
+            type="email"
+            placeholder="Enter email to share with"
+            @keyup.enter="submitShareList"
+          />
+
+          <div
+            v-if="
+              currentShareList.owner ||
+              (currentShareList.sharedWith && currentShareList.sharedWith.length > 0)
+            "
+            class="shared-users-container"
+            :class="{ 'no-input': !isOwner }"
+          >
+            <div v-if="currentShareList.owner" class="shared-users-section">
+              <h4 class="section-subtitle">Owner</h4>
+              <div class="user-item">
+                <v-icon icon="mdi-account" size="18" class="user-icon" />
+                <div class="user-info">
+                  <p class="user-name">
+                    {{ currentShareList.owner.name }} {{ currentShareList.owner.surname }}
+                  </p>
+                  <p class="user-email">{{ currentShareList.owner.email }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="currentShareList.sharedWith && currentShareList.sharedWith.length > 0"
+              class="shared-users-section"
+            >
+              <h4 class="section-subtitle">Shared with</h4>
+              <div v-for="user in currentShareList.sharedWith" :key="user.id" class="user-item">
+                <v-icon icon="mdi-account-multiple" size="18" class="user-icon" />
+                <div class="user-info">
+                  <p class="user-name">{{ user.name }} {{ user.surname }}</p>
+                  <p class="user-email">{{ user.email }}</p>
+                </div>
+                <v-btn
+                  v-if="isOwner"
+                  icon="mdi-close"
+                  variant="text"
+                  size="x-small"
+                  class="remove-user-btn"
+                  @click="handleRemoveUser(user.id)"
+                />
+              </div>
+            </div>
           </div>
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
-            :disabled="!newListName.trim()"
-            @click="createNewList"
-          >
-            Create
-          </v-btn>
-        </template>
-      </BaseDialog>
-
-      <BaseDialog v-model="showPurchasesDialog" title="Purchase History" :max-width="800">
-        <div v-if="purchasesStore.loading" class="text-center py-8">
-          <v-progress-circular indeterminate color="primary" />
         </div>
-        <div v-else-if="purchasesStore.purchases.length === 0" class="text-center py-8">
-          <p class="text-body-1 text-medium-emphasis">No purchase history for this list</p>
-        </div>
-        <v-list v-else>
-          <v-list-item
-            v-for="purchase in purchasesStore.purchases"
-            :key="purchase.id"
-            class="mb-2"
-            border
-            rounded
-          >
-            <template v-slot:prepend>
-              <v-icon icon="mdi-cart-check" />
-            </template>
-            <v-list-item-title>
-              Purchase #{{ purchase.id }} - {{ purchase.listItemArray.length }} items
-            </v-list-item-title>
-            <v-list-item-subtitle>
-              {{ new Date(purchase.createdAt || '').toLocaleDateString() }}
-            </v-list-item-subtitle>
-            <template v-slot:append>
-              <v-btn
-                icon="mdi-restore"
-                variant="text"
-                size="small"
-                @click.stop="handleRestorePurchase(purchase.id)"
-              />
-            </template>
-          </v-list-item>
-        </v-list>
-
-        <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Close</v-btn>
-        </template>
-      </BaseDialog>
-
-      <BaseDialog v-model="showShareDialog" title="Share List">
-        <BaseInput
-          v-model="shareEmail"
-          label="Email address"
-          type="email"
-          placeholder="Enter email to share with"
-          autofocus
-          @keyup.enter="submitShareList"
-        />
 
         <template #actions="{ close }">
           <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
@@ -413,45 +470,35 @@ watch(
               :model-value="!!shareError"
             />
           </div>
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn class="btn-cancel" elevation="0" @click="close">
+            {{ isOwner ? 'Done' : 'Close' }}
+          </v-btn>
           <v-btn
+            v-if="isOwner"
             class="btn-add"
             elevation="0"
             :disabled="!shareEmail.trim() || shareLoading"
             :loading="shareLoading"
             @click="submitShareList"
           >
-            Share
+            Add
           </v-btn>
         </template>
       </BaseDialog>
 
       <!-- Edit List Dialog -->
-      <BaseDialog v-model="showEditListDialog" title="Edit List" :max-width="450">
-        <BaseInput
-          v-model="editListName"
-          label="List Name"
-          placeholder="Enter list name"
-          class="mb-4"
-        />
-        <BaseInput
-          v-model="editListDescription"
-          label="Description (optional)"
-          placeholder="Enter list description"
-        />
-
-        <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
-            :disabled="!editListName.trim()"
-            @click="confirmEditList"
-          >
-            Save Changes
-          </v-btn>
-        </template>
-      </BaseDialog>
+      <ListFormDialog
+        v-model="showEditListDialog"
+        title="Edit List"
+        :name="editListName"
+        :description="editListDescription"
+        :recurring="editListRecurring"
+        confirm-text="Save Changes"
+        @update:name="editListName = $event"
+        @update:description="editListDescription = $event"
+        @update:recurring="editListRecurring = $event"
+        @confirm="confirmEditList"
+      />
 
       <BaseDialog v-model="showDeleteDialog" title="Delete List" :max-width="450">
         <div class="delete-confirmation">
@@ -468,6 +515,15 @@ watch(
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteList">Delete</v-btn>
         </template>
       </BaseDialog>
+
+      <ConfirmDialog
+        v-model="showPurchaseDialog"
+        title="Mark as Purchased"
+        message="Mark this list as purchased? This will save it to history."
+        confirm-text="Mark as Purchased"
+        variant="success"
+        @confirm="confirmPurchase"
+      />
     </v-container>
   </div>
 </template>
@@ -495,12 +551,11 @@ watch(
 }
 
 .new-list-btn {
-  background-color: #999999 !important;
+  background-color: #000 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #838383 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 120px;
@@ -508,7 +563,7 @@ watch(
 }
 
 .new-list-btn:hover {
-  background-color: #757575 !important;
+  background-color: #1a1a1a !important;
   color: white !important;
 }
 
@@ -576,5 +631,91 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 2rem 0;
+}
+
+.share-list-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #212121;
+  margin: 0 0 1rem 0;
+}
+
+.shared-users-container {
+  margin-top: 1rem;
+}
+
+.shared-users-container.no-input {
+  margin-top: 0;
+}
+
+.shared-users-section {
+  margin-bottom: 1rem;
+}
+
+.shared-users-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-subtitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.5rem 0;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  margin-bottom: 0.375rem;
+}
+
+.user-item:last-child {
+  margin-bottom: 0;
+}
+
+.user-icon {
+  color: #999;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #212121;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: #999;
+  margin: 0.125rem 0 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-user-btn {
+  color: #999 !important;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.remove-user-btn:hover {
+  color: #e53935 !important;
+  opacity: 1;
 }
 </style>
