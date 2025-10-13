@@ -35,21 +35,19 @@ const showInlineCategoryCreate = ref(false)
 const inlineCategoryName = ref('')
 const inlineCategoryError = ref('')
 
+const showEditCategoryDialog = ref(false)
+const editingCategoryId = ref<number | null>(null)
+const editCategoryName = ref('')
+
+const showDeleteCategoryDialog = ref(false)
+const deleteCategoryId = ref<number | null>(null)
+const deleteCategoryName = ref('')
+
 function handleAddProduct() {
   inlineCategoryName.value = ''
   inlineCategoryError.value = ''
   newProductWarning.value = ''
   dialog.value = true
-}
-
-function onCategoryChange(value: number | string) {
-  if (value === 'create_new') {
-    showInlineCategoryCreate.value = true
-    newProductCategoryId.value = null
-  } else {
-    showInlineCategoryCreate.value = false
-    newProductCategoryId.value = value as number
-  }
 }
 
 async function createInlineCategory() {
@@ -130,6 +128,52 @@ async function confirmDeleteProduct() {
     if (editDialog.value && editingProduct.value?.id === deletedId) {
       editDialog.value = false
       editingProduct.value = null
+    }
+  }
+}
+
+function handleEditCategory(categoryId: number, categoryName: string) {
+  editingCategoryId.value = categoryId
+  editCategoryName.value = categoryName
+  showEditCategoryDialog.value = true
+}
+
+async function confirmEditCategory() {
+  if (editingCategoryId.value && editCategoryName.value.trim()) {
+    try {
+      await productsStore.updateCategory(editingCategoryId.value, {
+        name: editCategoryName.value.trim(),
+      })
+      showEditCategoryDialog.value = false
+      editingCategoryId.value = null
+      editCategoryName.value = ''
+    } catch (err) {
+      alert('Failed to update category')
+    }
+  }
+}
+
+function handleDeleteCategory(categoryId: number, categoryName: string) {
+  deleteCategoryId.value = categoryId
+  deleteCategoryName.value = categoryName
+  showDeleteCategoryDialog.value = true
+}
+
+async function confirmDeleteCategory() {
+  if (deleteCategoryId.value) {
+    try {
+      await productsStore.deleteCategory(deleteCategoryId.value)
+      showDeleteCategoryDialog.value = false
+      deleteCategoryId.value = null
+      deleteCategoryName.value = ''
+      if (newProductCategoryId.value === deleteCategoryId.value) {
+        newProductCategoryId.value = null
+      }
+      if (editProductCategoryId.value === deleteCategoryId.value) {
+        editProductCategoryId.value = null
+      }
+    } catch (err) {
+      alert('Failed to delete category')
     }
   }
 }
@@ -222,19 +266,43 @@ watch(
         <BaseInput v-model="newProductName" label="Name" class="mb-4" />
 
         <div v-if="!showInlineCategoryCreate">
-          <v-select
-            :model-value="newProductCategoryId"
-            :items="[
-              ...productsStore.categories.map((c) => ({ title: c.name, value: c.id })),
-              { title: '+ Create New Category', value: 'create_new' },
-            ]"
-            item-title="title"
-            item-value="value"
-            label="Category"
-            variant="outlined"
-            density="comfortable"
-            @update:model-value="onCategoryChange"
-          />
+          <div class="category-label">Category</div>
+          <div v-if="productsStore.categories.length === 0" class="no-categories-message">
+            <v-icon size="32" color="grey-lighten-1" class="mb-2">mdi-label-outline</v-icon>
+            <p class="text-body-2 text-medium-emphasis">No categories available</p>
+          </div>
+          <div v-else class="category-list-container">
+            <v-list class="category-list">
+              <v-list-item
+                v-for="category in productsStore.categories"
+                :key="category.id"
+                :class="['category-list-item', { selected: newProductCategoryId === category.id }]"
+                @click="newProductCategoryId = category.id"
+              >
+                <v-list-item-title>{{ category.name }}</v-list-item-title>
+                <template v-slot:append>
+                  <div class="category-actions">
+                    <v-btn
+                      icon="mdi-pencil-outline"
+                      variant="text"
+                      size="small"
+                      @click.stop="handleEditCategory(category.id, category.name)"
+                    />
+                    <v-btn
+                      icon="mdi-delete-outline"
+                      variant="text"
+                      size="small"
+                      color="error"
+                      @click.stop="handleDeleteCategory(category.id, category.name)"
+                    />
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </div>
+          <v-btn class="create-category-btn" elevation="0" @click="showInlineCategoryCreate = true">
+            + Create New Category
+          </v-btn>
         </div>
 
         <div v-else class="mb-4">
@@ -348,6 +416,38 @@ watch(
         <template #actions="{ close }">
           <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
           <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Delete</v-btn>
+        </template>
+      </BaseDialog>
+
+      <BaseDialog v-model="showEditCategoryDialog" title="Edit Category" :max-width="450">
+        <BaseInput v-model="editCategoryName" label="Category name" class="mb-4" />
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn
+            class="btn-add"
+            elevation="0"
+            :disabled="!editCategoryName.trim()"
+            @click="confirmEditCategory"
+          >
+            Save
+          </v-btn>
+        </template>
+      </BaseDialog>
+
+      <BaseDialog v-model="showDeleteCategoryDialog" title="Delete Category" :max-width="450">
+        <div class="delete-confirmation">
+          <v-icon icon="mdi-alert-circle-outline" size="48" color="error" class="mb-4" />
+          <p class="delete-message">
+            Are you sure you want to delete <strong>{{ deleteCategoryName }}</strong
+            >?
+          </p>
+          <p class="delete-warning">This action cannot be undone.</p>
+        </div>
+
+        <template #actions="{ close }">
+          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
+          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteCategory">Delete</v-btn>
         </template>
       </BaseDialog>
     </v-container>
@@ -482,5 +582,78 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 2rem 0;
+}
+
+.category-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #616161;
+  margin-bottom: 0.5rem;
+}
+
+.no-categories-message {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #757575;
+}
+
+.category-list-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  scrollbar-width: none;
+}
+
+.category-list-container::-webkit-scrollbar {
+  display: none;
+}
+
+.category-list {
+  padding: 0.5rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-list-item {
+  cursor: pointer;
+  border-radius: 8px !important;
+  padding: 0.375rem 0.75rem !important;
+  transition: background-color 0.2s ease;
+}
+
+.category-list-item:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.category-list-item.selected {
+  background-color: #e0e0e0 !important;
+}
+
+.category-list-item.selected:hover {
+  background-color: #d0d0d0 !important;
+}
+
+.category-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.create-category-btn {
+  background-color: #f5f5f5 !important;
+  color: #000 !important;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.create-category-btn:hover {
+  background-color: #eeeeee !important;
 }
 </style>
