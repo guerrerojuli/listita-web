@@ -416,7 +416,7 @@ onMounted(async () => {
                   <template v-slot:prepend>
                     <v-icon icon="mdi-pencil-outline" />
                   </template>
-                  <v-list-item-title>Rename</v-list-item-title>
+                  <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="handleShareList">
                   <template v-slot:prepend>

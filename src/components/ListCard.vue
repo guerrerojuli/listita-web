@@ -119,7 +119,7 @@ function viewHistory() {
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Rename</v-list-item-title>
+              <v-list-item-title class="menu-text">Edit</v-list-item-title>
             </v-list-item>
 
             <v-list-item @click="togglePrivate" class="menu-item" rounded="lg">
