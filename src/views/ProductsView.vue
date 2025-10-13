@@ -5,10 +5,8 @@ import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
-import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import DialogButton from '@/components/DialogButton.vue'
-import BaseButton from '@/components/BaseButton.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
@@ -34,8 +32,11 @@ const deleteProductId = ref<number | null>(null)
 const deleteProductName = ref('')
 
 const showInlineCategoryCreate = ref(false)
+const showInlineCategoryCreateEdit = ref(false)
 const inlineCategoryName = ref('')
 const inlineCategoryError = ref('')
+const inlineCategoryNameEdit = ref('')
+const inlineCategoryErrorEdit = ref('')
 
 const showEditCategoryDialog = ref(false)
 const editingCategoryId = ref<number | null>(null)
@@ -75,6 +76,20 @@ async function createInlineCategory() {
       // Don't close the dialog - keep it open for product creation
     } catch (err) {
       inlineCategoryError.value = 'Failed to create category'
+    }
+  }
+}
+
+async function createInlineCategoryEdit() {
+  if (inlineCategoryNameEdit.value.trim()) {
+    try {
+      const newCategory = await productsStore.createCategory(inlineCategoryNameEdit.value.trim())
+      inlineCategoryNameEdit.value = ''
+      inlineCategoryErrorEdit.value = ''
+      showInlineCategoryCreateEdit.value = false
+      editProductCategoryId.value = newCategory.id
+    } catch (err) {
+      inlineCategoryErrorEdit.value = 'Failed to create category'
     }
   }
 }
@@ -121,6 +136,9 @@ async function updateProduct() {
     })
     editDialog.value = false
     editingProduct.value = null
+    showInlineCategoryCreateEdit.value = false
+    inlineCategoryNameEdit.value = ''
+    inlineCategoryErrorEdit.value = ''
   }
 }
 
@@ -277,8 +295,17 @@ watch(
         <p class="text-h6 text-medium-emphasis">No products to add</p>
       </div>
 
-      <BaseDialog v-model="dialog" :title="showInlineCategoryCreate ? 'Add Category' : 'Add product'" @update:model-value="(value) => !value && handleDialogClose()">
-        <BaseInput v-if="!showInlineCategoryCreate" v-model="newProductName" label="Name" class="mb-4" />
+      <BaseDialog
+        v-model="dialog"
+        :title="showInlineCategoryCreate ? 'Add Category' : 'Add product'"
+        @update:model-value="(value) => !value && handleDialogClose()"
+      >
+        <BaseInput
+          v-if="!showInlineCategoryCreate"
+          v-model="newProductName"
+          label="Name"
+          class="mb-4"
+        />
 
         <div v-if="!showInlineCategoryCreate">
           <div class="category-label">Category</div>
@@ -347,7 +374,16 @@ watch(
               :model-value="!!newProductWarning"
             />
           </div>
-          <DialogButton variant="cancel" @click="() => { close(); handleDialogClose(); }">Cancel</DialogButton>
+          <DialogButton
+            variant="cancel"
+            @click="
+              () => {
+                close()
+                handleDialogClose()
+              }
+            "
+            >Cancel</DialogButton
+          >
           <DialogButton
             v-if="!showInlineCategoryCreate"
             variant="primary"
@@ -367,19 +403,90 @@ watch(
         </template>
       </BaseDialog>
 
-      <BaseDialog v-model="editDialog" title="Edit product">
-        <BaseInput v-model="editProductName" label="Name" class="mb-4" />
-        <BaseSelect
-          v-model="editProductCategoryId"
-          :items="productsStore.categories"
-          item-title="name"
-          item-value="id"
-          label="Category"
+      <BaseDialog
+        v-model="editDialog"
+        title="Edit product"
+        @update:model-value="
+          (value) =>
+            !value &&
+            (() => {
+              showInlineCategoryCreateEdit = false
+              inlineCategoryNameEdit = ''
+              inlineCategoryErrorEdit = ''
+            })()
+        "
+      >
+        <BaseInput
+          v-if="!showInlineCategoryCreateEdit"
+          v-model="editProductName"
+          label="Name"
           class="mb-4"
         />
 
+        <div v-if="!showInlineCategoryCreateEdit">
+          <div class="category-label">Category</div>
+          <div v-if="productsStore.categories.length === 0" class="no-categories-message">
+            <v-icon size="32" color="grey-lighten-1" class="mb-2">mdi-label-outline</v-icon>
+            <p class="text-body-2 text-medium-emphasis">No categories available</p>
+          </div>
+          <div v-else class="category-list-container">
+            <v-list class="category-list">
+              <v-list-item
+                v-for="category in productsStore.categories"
+                :key="category.id"
+                :class="['category-list-item', { selected: editProductCategoryId === category.id }]"
+                @click="editProductCategoryId = category.id"
+              >
+                <v-list-item-title>{{ category.name }}</v-list-item-title>
+                <template v-slot:append>
+                  <div class="category-actions">
+                    <v-btn
+                      icon="mdi-pencil-outline"
+                      variant="text"
+                      size="small"
+                      @click.stop="handleEditCategory(category.id, category.name)"
+                    />
+                    <v-btn
+                      icon="mdi-delete-outline"
+                      variant="text"
+                      size="small"
+                      color="error"
+                      @click.stop="handleDeleteCategory(category.id, category.name)"
+                    />
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </div>
+          <v-btn
+            class="create-category-btn"
+            elevation="0"
+            @click="showInlineCategoryCreateEdit = true"
+          >
+            + Create New Category
+          </v-btn>
+        </div>
+
+        <div v-else class="mb-4">
+          <BaseInput
+            v-model="inlineCategoryNameEdit"
+            label="Category name"
+            placeholder="Enter category name"
+            class="mb-3"
+            @keyup.enter="createInlineCategoryEdit"
+          />
+          <BaseNotification
+            v-if="inlineCategoryErrorEdit"
+            variant="text"
+            type="error"
+            :message="inlineCategoryErrorEdit"
+            :model-value="!!inlineCategoryErrorEdit"
+          />
+        </div>
+
         <template #actions>
           <DialogButton
+            v-if="!showInlineCategoryCreateEdit"
             variant="danger"
             @click="
               () => {
@@ -392,11 +499,33 @@ watch(
             Remove
           </DialogButton>
           <DialogButton
+            v-if="showInlineCategoryCreateEdit"
+            variant="cancel"
+            @click="
+              () => {
+                showInlineCategoryCreateEdit = false
+                inlineCategoryNameEdit = ''
+                inlineCategoryErrorEdit = ''
+              }
+            "
+          >
+            Cancel
+          </DialogButton>
+          <DialogButton
+            v-if="!showInlineCategoryCreateEdit"
             variant="primary"
             :disabled="!editProductName.trim() || !editProductCategoryId"
             @click="updateProduct"
           >
             Save
+          </DialogButton>
+          <DialogButton
+            v-else
+            variant="primary"
+            :disabled="!inlineCategoryNameEdit.trim()"
+            @click="createInlineCategoryEdit"
+          >
+            Add
           </DialogButton>
         </template>
       </BaseDialog>
@@ -523,7 +652,6 @@ watch(
   justify-content: flex-end;
 }
 
-
 .delete-confirmation {
   text-align: center;
   padding: 1rem 0;
@@ -545,7 +673,6 @@ watch(
   color: #e53935;
   margin: 0;
 }
-
 
 .load-more-trigger {
   min-height: 100px;
