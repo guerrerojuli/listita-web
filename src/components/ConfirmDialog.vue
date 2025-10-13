@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import DialogButton from './DialogButton.vue'
 
 interface Props {
   modelValue: boolean
@@ -62,12 +63,12 @@ const confirmButtonClass = computed(() => {
       </v-card-text>
 
       <v-card-actions class="dialog-actions">
-        <v-btn class="btn-cancel" elevation="0" @click="handleCancel">
+        <DialogButton variant="cancel" @click="handleCancel">
           {{ cancelText }}
-        </v-btn>
-        <v-btn :class="confirmButtonClass" elevation="0" @click="handleConfirm">
+        </DialogButton>
+        <DialogButton :variant="props.variant === 'danger' ? 'danger' : 'primary'" @click="handleConfirm">
           {{ confirmText }}
-        </v-btn>
+        </DialogButton>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -110,33 +111,4 @@ const confirmButtonClass = computed(() => {
   justify-content: flex-end;
 }
 
-.btn-cancel {
-  background-color: #e0e0e0 !important;
-  color: #424242 !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.btn-add {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.btn-remove {
-  background-color: #f44336 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
 </style>

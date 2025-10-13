@@ -4,6 +4,7 @@ import BaseDialog from './BaseDialog.vue'
 import BaseInput from './BaseInput.vue'
 import BaseTextarea from './BaseTextarea.vue'
 import BaseNotification from './BaseNotification.vue'
+import DialogButton from './DialogButton.vue'
 
 interface Props {
   modelValue: boolean
@@ -85,10 +86,10 @@ function handleConfirm() {
           :model-value="!!errorMessage"
         />
       </div>
-      <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-      <v-btn class="btn-add" elevation="0" :disabled="!listName.trim()" @click="handleConfirm">
+      <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+      <DialogButton variant="primary" :disabled="!listName.trim()" @click="handleConfirm">
         {{ confirmText }}
-      </v-btn>
+      </DialogButton>
     </template>
   </BaseDialog>
 </template>

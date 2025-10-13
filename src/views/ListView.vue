@@ -10,6 +10,8 @@ import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ListFormDialog from '@/components/ListFormDialog.vue'
+import DialogButton from '@/components/DialogButton.vue'
+import BaseButton from '@/components/BaseButton.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
@@ -663,8 +665,8 @@ onMounted(async () => {
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Remove</v-btn>
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton variant="danger" @click="confirmDeleteProduct">Remove</DialogButton>
         </template>
       </BaseDialog>
 
@@ -697,15 +699,14 @@ onMounted(async () => {
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton
+            variant="primary"
             :disabled="!editItemAmount || editItemAmount <= 0"
             @click="confirmEditItem"
           >
             Save Changes
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -835,9 +836,8 @@ onMounted(async () => {
               :model-value="!!inlineCategoryError"
             />
             <div class="inline-category-actions">
-              <v-btn
-                class="btn-cancel"
-                elevation="0"
+              <DialogButton
+                variant="cancel"
                 @click="
                   () => {
                     showInlineCategoryCreate = false
@@ -847,40 +847,37 @@ onMounted(async () => {
                 "
               >
                 Cancel
-              </v-btn>
-              <v-btn
-                class="btn-create-category"
-                elevation="0"
+              </DialogButton>
+              <BaseButton
+                variant="create-category"
                 :disabled="!inlineCategoryName.trim()"
                 @click="createInlineCategory"
               >
                 Create
-              </v-btn>
+              </BaseButton>
             </div>
           </div>
         </div>
 
         <template #actions>
-          <v-btn
+          <DialogButton
             v-if="!showCreateProductInDialog"
-            class="btn-cancel"
-            elevation="0"
+            variant="cancel"
             @click="closeAddProductDialog"
           >
             Cancel
-          </v-btn>
-          <v-btn v-else class="btn-cancel" elevation="0" @click="showCreateProductInDialog = false">
+          </DialogButton>
+          <DialogButton v-else variant="cancel" @click="showCreateProductInDialog = false">
             Back
-          </v-btn>
-          <v-btn
+          </DialogButton>
+          <DialogButton
             v-if="showCreateProductInDialog"
-            class="btn-add"
-            elevation="0"
+            variant="primary"
             :disabled="!newProductName.trim() || !newProductCategoryId"
             @click="createAndAddProduct"
           >
             Create & Add
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -903,15 +900,14 @@ onMounted(async () => {
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton
+            variant="primary"
             :disabled="!addQuantity || addQuantity < 1"
             @click="confirmAddProduct"
           >
             Add to List
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -923,15 +919,14 @@ onMounted(async () => {
         />
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton
+            variant="primary"
             :disabled="!editCategoryName.trim()"
             @click="confirmEditCategory"
           >
             Save
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -1047,24 +1042,6 @@ onMounted(async () => {
   margin: 0;
 }
 
-.btn-remove {
-  color: white !important;
-  background-color: #e53935 !important;
-  text-transform: none;
-  font-weight: 500;
-  padding: 0 24px !important;
-  border-radius: 8px !important;
-}
-
-.btn-remove:hover {
-  background-color: #c62828 !important;
-}
-
-.btn-cancel {
-  text-transform: none;
-  font-weight: 500;
-  color: #666 !important;
-}
 
 .search-row {
   display: flex;
@@ -1150,19 +1127,6 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.btn-create-category {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0 1.5rem !important;
-}
-
-.btn-create-category:hover {
-  background-color: #1a1a1a !important;
-}
 
 .dialog-load-more-trigger {
   display: flex;
