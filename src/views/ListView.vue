@@ -187,7 +187,7 @@ async function confirmEditList() {
     try {
       await listsStore.updateList(listId.value, {
         name: editListName.value.trim(),
-        description: editListDescription.value.trim() || undefined,
+        description: editListDescription.value?.trim() || '',
       })
       showEditListDialog.value = false
       editListName.value = ''

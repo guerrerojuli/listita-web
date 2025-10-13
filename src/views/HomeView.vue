@@ -29,6 +29,7 @@ const searchQuery = ref('')
 const dialog = ref(false)
 const newListName = ref('')
 const newListDescription = ref('')
+const newListRecurring = ref(false)
 const newListWarning = ref('')
 const showPurchasesDialog = ref(false)
 const selectedListForHistory = ref<number | null>(null)
@@ -63,6 +64,16 @@ const filteredActiveLists = computed(() => {
 function handleNewList() {
   newListName.value = ''
   newListDescription.value = ''
+  newListRecurring.value = false
+  newListWarning.value = ''
+  dialog.value = true
+}
+
+function handleCreateFromSearch() {
+  newListName.value = searchQuery.value.trim()
+  newListDescription.value = ''
+  newListRecurring.value = false
+  searchQuery.value = ''
   newListWarning.value = ''
   dialog.value = true
 }
@@ -72,11 +83,12 @@ async function createNewList() {
     try {
       await listsStore.createList(
         newListName.value.trim(),
-        newListDescription.value.trim() || undefined,
-        false,
+        newListDescription.value?.trim() || '',
+        newListRecurring.value,
       )
       newListName.value = ''
       newListDescription.value = ''
+      newListRecurring.value = false
       newListWarning.value = ''
       dialog.value = false
       showSuccess('List created successfully!')
@@ -141,7 +153,7 @@ async function confirmEditList() {
     try {
       await listsStore.updateList(editingListId.value, {
         name: editListName.value.trim(),
-        description: editListDescription.value.trim() || undefined,
+        description: editListDescription.value?.trim() || '',
       })
       showEditListDialog.value = false
       editingListId.value = null
@@ -342,6 +354,14 @@ watch(
           :maxlength="250"
           counter
           :rows="3"
+        />
+        <v-checkbox
+          v-model="newListRecurring"
+          label="Recurring"
+          color="primary"
+          density="compact"
+          hide-details
+          class="mt-2"
         />
 
         <template #actions="{ close }">

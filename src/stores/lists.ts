@@ -34,7 +34,11 @@ export const useListsStore = defineStore('lists', () => {
 
     const errorMessage = err.message || ''
 
-    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error') || errorMessage.includes('network')) {
+    if (
+      errorMessage.includes('Failed to fetch') ||
+      errorMessage.includes('Network Error') ||
+      errorMessage.includes('network')
+    ) {
       return 'Unable to connect to the server. Please check your internet connection and try again.'
     }
 
@@ -90,7 +94,7 @@ export const useListsStore = defineStore('lists', () => {
     }
   }
 
-  async function createList(name: string, description?: string, recurring: boolean = false) {
+  async function createList(name: string, description: string = '', recurring: boolean = false) {
     const shoppingList = new ShoppingList(name, recurring, undefined, description, {})
     await ShoppingListApi.add(shoppingList)
     await fetchLists()
