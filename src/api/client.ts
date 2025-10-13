@@ -4,10 +4,7 @@ class Api {
   static token: string | null = null
 
   static get baseUrl(): string {
-    return (
-      (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ||
-      DEFAULT_BASE_URL
-    )
+    return import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL
   }
 
   static get timeout(): number {
