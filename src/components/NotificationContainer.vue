@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useNotification } from '@/composables/useNotification'
 
 const { notifications, removeNotification } = useNotification()

@@ -19,7 +19,6 @@ const emit = defineEmits<Emits>()
   <div class="product-card">
     <div class="product-main-info">
       <h3 class="product-name">{{ product.name }}</h3>
-      <!-- Price not provided by API spec; keep name/category -->
     </div>
 
     <div class="product-right">

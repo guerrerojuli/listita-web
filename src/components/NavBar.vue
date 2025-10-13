@@ -62,7 +62,7 @@ async function handleUpdateProfile() {
       showProfileDialog.value = false
       profileSuccess.value = ''
     }, 1500)
-  } catch (err: any) {
+  } catch {
     profileError.value = 'Failed to update profile'
   }
 }
@@ -98,7 +98,7 @@ async function handleChangePassword() {
       showPasswordDialog.value = false
       passwordSuccess.value = ''
     }, 1500)
-  } catch (err: any) {
+  } catch {
     passwordError.value = 'Failed to change password. Check your current password.'
   }
 }
