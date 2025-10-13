@@ -75,7 +75,6 @@ function viewHistory() {
       <div class="list-card-info">
         <div class="list-card-title-row">
           <h3 class="list-card-title">{{ list.name }}</h3>
-          <v-icon v-if="list.recurring" icon="mdi-star" size="20" class="recurring-badge" />
         </div>
         <p v-if="list.description" class="list-card-description">{{ list.description }}</p>
         <p class="list-card-subtitle">{{ subtitle }}</p>
@@ -196,11 +195,6 @@ function viewHistory() {
   font-weight: 600;
   color: #000;
   margin: 0;
-}
-
-.recurring-badge {
-  color: #ffa726;
-  flex-shrink: 0;
 }
 
 .list-card-description {
