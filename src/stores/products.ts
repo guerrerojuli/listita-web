@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ListItemApi } from '@/api/listItem'
+import { useGlobalProductsStore } from '@/stores/globalProducts'
 import type { ListItem as ListItemType } from '@/types/api'
 
 interface ListItemWithListId extends ListItemType {
@@ -18,13 +19,29 @@ export const useProductsStore = defineStore('products', () => {
     return items.value.filter((i) => i.listId === listId)
   }
 
+  function enrichProductData(item: ListItemType): ListItemType {
+    const globalProductsStore = useGlobalProductsStore()
+
+    if (item.product?.id) {
+      const fullProduct = globalProductsStore.products.find((p) => p.id === item.product.id)
+      if (fullProduct) {
+        return { ...item, product: fullProduct }
+      }
+    }
+
+    return item
+  }
+
   async function loadListItems(listId: number, params?: Record<string, unknown>) {
     currentListId.value = listId
     currentPage.value = 1
     hasMore.value = true
 
     const result = await ListItemApi.getAll(listId, undefined, { ...params, page: 1, per_page: 10 })
-    items.value = result.data.map((item) => ({ ...(item as ListItemType), listId }))
+    items.value = result.data.map((item) => ({
+      ...enrichProductData(item as ListItemType),
+      listId,
+    }))
     hasMore.value = result.pagination?.has_next ?? false
   }
 
@@ -40,7 +57,10 @@ export const useProductsStore = defineStore('products', () => {
         page: currentPage.value,
         per_page: 10,
       })
-      const newItems = result.data.map((item) => ({ ...(item as ListItemType), listId }))
+      const newItems = result.data.map((item) => ({
+        ...enrichProductData(item as ListItemType),
+        listId,
+      }))
       items.value = [...items.value, ...newItems]
       hasMore.value = result.pagination?.has_next ?? false
     } catch (err: unknown) {
@@ -53,7 +73,22 @@ export const useProductsStore = defineStore('products', () => {
 
   async function addItem(listId: number, productId: number, quantity = 1, unit = 'unit') {
     const response = await ListItemApi.add(listId, productId, quantity, unit)
-    items.value.unshift({ ...(response as ListItemType), listId })
+    const item = response as ListItemType
+
+    const newItem: ListItemWithListId = {
+      id: item.id,
+      quantity: item.quantity,
+      unit: item.unit,
+      metadata: item.metadata,
+      purchased: item.purchased,
+      lastPurchasedAt: item.lastPurchasedAt,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      product: item.product,
+      listId,
+    }
+
+    items.value.unshift(newItem)
   }
 
   async function deleteItem(listId: number, itemId: number) {
@@ -64,14 +99,16 @@ export const useProductsStore = defineStore('products', () => {
 
   async function setPurchased(listId: number, itemId: number, purchased: boolean) {
     const result = await ListItemApi.setPurchased(listId, itemId, purchased)
+    const enrichedItem = enrichProductData(result as ListItemType)
     const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = { ...(result as ListItemType), listId }
+    if (idx !== -1) items.value[idx] = { ...enrichedItem, listId }
   }
 
   async function updateQuantity(listId: number, itemId: number, quantity: number, unit?: string) {
     const result = await ListItemApi.updateQuantity(listId, itemId, quantity, unit)
+    const enrichedItem = enrichProductData(result as ListItemType)
     const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = { ...(result as ListItemType), listId }
+    if (idx !== -1) items.value[idx] = { ...enrichedItem, listId }
   }
 
   function incrementQuantity(listId: number, itemId: number) {
