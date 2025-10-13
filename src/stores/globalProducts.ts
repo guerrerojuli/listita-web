@@ -24,20 +24,16 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     })
   })
 
-  function mapCategory(data: CategoryType): CategoryType {
-    return data
-  }
-
-  function mapProduct(data: ProductType): ProductType {
-    return data
-  }
-
   function getErrorMessage(err: any): string {
     if (!err) return 'Something went wrong. Please try again.'
 
     const errorMessage = err.message || ''
 
-    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error') || errorMessage.includes('network')) {
+    if (
+      errorMessage.includes('Failed to fetch') ||
+      errorMessage.includes('Network Error') ||
+      errorMessage.includes('network')
+    ) {
       return 'Unable to connect to the server. Please check your internet connection and try again.'
     }
 
@@ -60,7 +56,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
 
     try {
       const result = await ProductApi.getAll(undefined, { ...params, page: 1, per_page: 10 })
-      products.value = result.data.map((product) => mapProduct(product as unknown as ProductType))
+      products.value = result.data as ProductType[]
       hasMore.value = result.pagination?.has_next ?? false
     } catch (err: any) {
       error.value = getErrorMessage(err)
@@ -87,7 +83,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
         page: currentPage.value,
         per_page: 10,
       })
-      const newProducts = result.data.map((product) => mapProduct(product as unknown as ProductType))
+      const newProducts = result.data as ProductType[]
       products.value = [...products.value, ...newProducts]
       hasMore.value = result.pagination?.has_next ?? false
     } catch (err: any) {
@@ -101,9 +97,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   async function fetchCategories(params?: { name?: string }) {
     try {
       const result = await CategoryApi.getAll(undefined, params)
-      categories.value = result.data.map((category) =>
-        mapCategory(category as unknown as CategoryType),
-      )
+      categories.value = result.data as CategoryType[]
     } catch (err: any) {
       categories.value = []
     }
@@ -112,7 +106,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
   async function createCategory(name: string, metadata?: Record<string, unknown>) {
     const category = new Category(name, undefined, metadata)
     const result = await CategoryApi.add(category)
-    const created = mapCategory(result as unknown as CategoryType)
+    const created = result as CategoryType
     categories.value.unshift(created)
     return created
   }
@@ -124,7 +118,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     const category = await CategoryApi.get(id)
     const updatedCategory = Object.assign(category, updates)
     const result = await CategoryApi.modify(updatedCategory)
-    const updated = mapCategory(result as unknown as CategoryType)
+    const updated = result as CategoryType
     const index = categories.value.findIndex((c) => c.id === id)
     if (index !== -1) categories.value[index] = updated
     return updated
@@ -150,7 +144,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
       metadata as Record<string, unknown>,
     )
     const result = await ProductApi.add(product)
-    const created = mapProduct(result as unknown as ProductType)
+    const created = result as ProductType
     products.value.unshift(created)
   }
 
@@ -175,12 +169,10 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
       product.metadata = updates.metadata as Record<string, unknown>
     }
     const result = await ProductApi.modify(product)
-    const updated: ProductType = ('product' in result
-      ? result.product
-      : result) as unknown as ProductType
+    const updated: ProductType = ('product' in result ? result.product : result) as ProductType
     const index = products.value.findIndex((p) => p.id === id)
     if (index !== -1) {
-      products.value.splice(index, 1, mapProduct(updated))
+      products.value.splice(index, 1, updated)
     }
   }
 
