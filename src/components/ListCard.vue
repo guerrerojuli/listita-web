@@ -95,7 +95,11 @@ function viewHistory() {
 
         <v-card min-width="220" class="menu-card" elevation="8">
           <v-list class="menu-list" density="compact">
-            <v-list-item @click="toggleRecurrent" class="menu-item menu-item-recurring" rounded="lg">
+            <v-list-item
+              @click="toggleRecurrent"
+              class="menu-item menu-item-recurring"
+              rounded="lg"
+            >
               <template v-slot:prepend>
                 <v-icon
                   :icon="list.recurring ? 'mdi-star' : 'mdi-star-outline'"
@@ -204,6 +208,12 @@ function viewHistory() {
   color: #555;
   margin: 0.25rem 0 0.5rem 0;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .list-card-subtitle {
@@ -251,7 +261,6 @@ function viewHistory() {
 .menu-item:active {
   background-color: #eeeeee !important;
 }
-
 
 .menu-icon {
   color: #616161;

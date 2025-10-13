@@ -7,6 +7,7 @@ import SearchDropdown from '@/components/SearchDropdown.vue'
 import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import BaseTextarea from '@/components/BaseTextarea.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
 import { usePurchasesStore } from '@/stores/purchases'
@@ -69,7 +70,11 @@ function handleNewList() {
 async function createNewList() {
   if (newListName.value.trim()) {
     try {
-      await listsStore.createList(newListName.value.trim(), newListDescription.value.trim() || undefined, false)
+      await listsStore.createList(
+        newListName.value.trim(),
+        newListDescription.value.trim() || undefined,
+        false,
+      )
       newListName.value = ''
       newListDescription.value = ''
       newListWarning.value = ''
@@ -77,7 +82,8 @@ async function createNewList() {
       showSuccess('List created successfully!')
     } catch (err: any) {
       if (err.message && err.message.includes('already exists')) {
-        newListWarning.value = 'A list with this name already exists or was recently deleted. Please use a different name.'
+        newListWarning.value =
+          'A list with this name already exists or was recently deleted. Please use a different name.'
       } else {
         newListWarning.value = err.message || 'Failed to create list'
       }
@@ -133,9 +139,9 @@ function handleRenameList(listId: string) {
 async function confirmEditList() {
   if (editingListId.value && editListName.value.trim()) {
     try {
-      await listsStore.updateList(editingListId.value, { 
+      await listsStore.updateList(editingListId.value, {
         name: editListName.value.trim(),
-        description: editListDescription.value.trim() || undefined
+        description: editListDescription.value.trim() || undefined,
       })
       showEditListDialog.value = false
       editingListId.value = null
@@ -329,7 +335,14 @@ watch(
 
       <BaseDialog v-model="dialog" title="New List">
         <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
-        <BaseInput v-model="newListDescription" label="Description (optional)" class="mt-4" />
+        <BaseTextarea
+          v-model="newListDescription"
+          label="Description (optional)"
+          class="mt-4"
+          :maxlength="250"
+          counter
+          :rows="3"
+        />
 
         <template #actions="{ close }">
           <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
@@ -434,10 +447,13 @@ watch(
           placeholder="Enter list name"
           class="mb-4"
         />
-        <BaseInput
+        <BaseTextarea
           v-model="editListDescription"
           label="Description (optional)"
           placeholder="Enter list description"
+          :maxlength="250"
+          counter
+          :rows="3"
         />
 
         <template #actions="{ close }">

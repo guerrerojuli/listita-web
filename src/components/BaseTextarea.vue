@@ -1,57 +1,49 @@
 <script setup lang="ts">
 interface Props {
-  modelValue?: string | number | null
+  modelValue?: string | null
   label: string
-  type?: string
   placeholder?: string
-  autofocus?: boolean
   hint?: string
   persistentHint?: boolean
   disabled?: boolean
-  autocomplete?: string
   maxlength?: number
   counter?: boolean
+  rows?: number
+  maxRows?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  type: 'text',
-  autofocus: false,
   persistentHint: false,
   disabled: false,
-  autocomplete: 'off',
   counter: false,
+  rows: 3,
+  maxRows: 8,
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string | number]
-  keyup: [event: KeyboardEvent]
+  'update:modelValue': [value: string]
 }>()
 
-function handleInput(value: string | number) {
+function handleInput(value: string) {
   emit('update:modelValue', value)
-}
-
-function handleKeyup(event: KeyboardEvent) {
-  emit('keyup', event)
 }
 </script>
 
 <template>
-  <v-text-field
+  <v-textarea
     :model-value="props.modelValue"
     :label="props.label"
-    :type="props.type"
     :placeholder="props.placeholder"
-    :autofocus="props.autofocus"
     :hint="props.hint"
     :persistent-hint="props.persistentHint"
     :disabled="props.disabled"
-    :autocomplete="props.autocomplete"
     :maxlength="props.maxlength"
-    :counter="props.counter"
+    :counter="props.counter ? props.maxlength : undefined"
+    :rows="props.rows"
+    :max-rows="props.maxRows"
+    auto-grow
     variant="outlined"
     density="comfortable"
     @update:model-value="handleInput"
-    @keyup="handleKeyup"
   />
 </template>

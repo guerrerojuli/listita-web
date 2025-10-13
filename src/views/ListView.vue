@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import NavBar from '@/components/NavBar.vue'
 import SearchDropdown from '@/components/SearchDropdown.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import BaseTextarea from '@/components/BaseTextarea.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
@@ -21,7 +22,7 @@ const router = useRouter()
 const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
-const { showWarning } = useNotification()
+const { } = useNotification()
 
 const { hasMore, loadingMore } = storeToRefs(productsStore)
 
@@ -49,7 +50,7 @@ const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
 
 const showEditItemDialog = ref(false)
-const editingItem = ref<any>(null)
+const editingItem = ref<{ id: number; product?: { name?: string; category?: { name?: string } }; unit?: string; quantity?: number } | null>(null)
 const editItemUnit = ref<string>('unit')
 const editItemAmount = ref<number>(1)
 
@@ -162,11 +163,11 @@ async function confirmEditItem() {
         listId.value,
         editingItem.value.id,
         editItemAmount.value,
-        editItemUnit.value
+        editItemUnit.value,
       )
       showEditItemDialog.value = false
       editingItem.value = null
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update item:', err)
       alert('Failed to update item')
     }
@@ -184,14 +185,14 @@ function handleEditList() {
 async function confirmEditList() {
   if (editListName.value.trim()) {
     try {
-      await listsStore.updateList(listId.value, { 
+      await listsStore.updateList(listId.value, {
         name: editListName.value.trim(),
-        description: editListDescription.value.trim() || undefined
+        description: editListDescription.value.trim() || undefined,
       })
       showEditListDialog.value = false
       editListName.value = ''
       editListDescription.value = ''
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update list:', err)
       alert('Failed to update list')
     }
@@ -234,7 +235,7 @@ function handleShareList() {
 function handleAddProductFromDialog(product: Product) {
   selectedProductToAdd.value = product
   addQuantity.value = 1
-  addUnit.value = (product.metadata as any)?.unit || 'unit'
+  addUnit.value = (product.metadata as { unit?: string })?.unit || 'unit'
   showAddProductDialog.value = false
   showUnitQuantityDialog.value = true
 }
@@ -251,9 +252,9 @@ async function confirmAddProduct() {
       showUnitQuantityDialog.value = false
       selectedProductToAdd.value = null
       productSearchQuery.value = ''
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to add product:', err)
-      const errorMessage = err.message || 'Failed to add product to list'
+      const errorMessage = (err as Error)?.message || 'Failed to add product to list'
       alert(`Failed to add product: ${errorMessage}`)
     }
   }
@@ -282,7 +283,7 @@ async function createInlineCategory() {
       inlineCategoryError.value = ''
       showInlineCategoryCreate.value = false
       newProductCategoryId.value = newCategory.id
-    } catch (err) {
+    } catch {
       inlineCategoryError.value = 'Failed to create category'
     }
   }
@@ -308,7 +309,7 @@ async function createAndAddProduct() {
 
       newProductName.value = ''
       newProductCategoryId.value = null
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create product:', err)
       alert('Failed to create product')
     }
@@ -395,17 +396,12 @@ onMounted(async () => {
   <div v-else-if="list" class="list-view">
     <v-container class="py-8">
       <div style="max-width: 900px; margin-left: auto; margin-right: auto">
-        <v-btn
-          variant="text"
-          size="small"
-          class="back-button mb-4"
-          @click="router.push('/')"
-        >
+        <v-btn variant="text" size="small" class="back-button mb-4" @click="router.push('/')">
           <v-icon size="18" class="mr-1">mdi-arrow-left</v-icon>
           Back
         </v-btn>
 
-        <div class="d-flex align-center justify-space-between mb-8">
+        <div class="d-flex align-start justify-space-between mb-8">
           <div class="list-header-info">
             <h1 class="page-title">{{ list.name }}</h1>
             <p v-if="list.description" class="list-description">{{ list.description }}</p>
@@ -453,7 +449,12 @@ onMounted(async () => {
           placeholder="Search products in this list..."
           :show-dropdown="false"
         />
-        <v-btn class="add-product-btn" elevation="0" :height="44" @click="showAddProductDialog = true">
+        <v-btn
+          class="add-product-btn"
+          elevation="0"
+          :height="44"
+          @click="showAddProductDialog = true"
+        >
           Add Product
           <v-icon size="20" class="ml-2">mdi-plus</v-icon>
         </v-btn>
@@ -516,25 +517,27 @@ onMounted(async () => {
         <div v-if="editingItem" class="edit-item-content">
           <div class="product-info mb-4">
             <h3 class="product-name">{{ editingItem.product?.name || 'Product' }}</h3>
-            <p class="product-category">{{ editingItem.product?.category?.name || 'No category' }}</p>
+            <p class="product-category">
+              {{ editingItem.product?.category?.name || 'No category' }}
+            </p>
           </div>
-          
-        <div class="form-row">
-          <BaseSelect
-            v-model="editItemUnit"
-            :items="unitOptions"
-            item-title="title"
-            item-value="value"
-            label="Unit"
-          />
-          <BaseInput
-            v-model.number="editItemAmount"
-            type="number"
-            step="0.01"
-            min="0"
-            label="Amount"
-          />
-        </div>
+
+          <div class="form-row">
+            <BaseSelect
+              v-model="editItemUnit"
+              :items="unitOptions"
+              item-title="title"
+              item-value="value"
+              label="Unit"
+            />
+            <BaseInput
+              v-model.number="editItemAmount"
+              type="number"
+              step="0.01"
+              min="0"
+              label="Amount"
+            />
+          </div>
         </div>
 
         <template #actions="{ close }">
@@ -558,10 +561,13 @@ onMounted(async () => {
           placeholder="Enter list name"
           class="mb-4"
         />
-        <BaseInput
+        <BaseTextarea
           v-model="editListDescription"
           label="Description (optional)"
           placeholder="Enter list description"
+          :maxlength="250"
+          counter
+          :rows="3"
         />
 
         <template #actions="{ close }">
@@ -621,9 +627,7 @@ onMounted(async () => {
             <template v-slot:prepend>
               <v-icon icon="mdi-plus-circle-outline" />
             </template>
-            <v-list-item-title class="font-weight-medium">
-              Create New Product
-            </v-list-item-title>
+            <v-list-item-title class="font-weight-medium"> Create New Product </v-list-item-title>
           </v-list-item>
         </div>
 
@@ -687,7 +691,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <template #actions="{ close }">
+        <template #actions>
           <v-btn
             v-if="!showCreateProductInDialog"
             class="btn-cancel"
@@ -696,12 +700,7 @@ onMounted(async () => {
           >
             Cancel
           </v-btn>
-          <v-btn
-            v-else
-            class="btn-cancel"
-            elevation="0"
-            @click="showCreateProductInDialog = false"
-          >
+          <v-btn v-else class="btn-cancel" elevation="0" @click="showCreateProductInDialog = false">
             Back
           </v-btn>
           <v-btn
@@ -771,11 +770,15 @@ onMounted(async () => {
   color: #666;
   margin: 0.5rem 0 0 0;
   line-height: 1.4;
+  max-width: 600px;
+  word-break: break-word;
 }
 
 .header-actions {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: -0.25rem;
 }
 
 .back-button {
