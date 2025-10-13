@@ -10,11 +10,6 @@ export const usePurchasesStore = defineStore('purchases', () => {
   const hasMore = ref(true)
   const loadingMore = ref(false)
 
-  function mapPurchase(data: PurchaseType): PurchaseType {
-    // Return data as-is from API, no need to instantiate class
-    return data
-  }
-
   async function fetchPurchases(params?: {
     list_id?: number
     page?: number
@@ -27,9 +22,7 @@ export const usePurchasesStore = defineStore('purchases', () => {
     hasMore.value = true
     try {
       const result = await PurchaseApi.getAll(undefined, { ...params, page: 1, per_page: 10 })
-      purchases.value = result.data.map((purchase) =>
-        mapPurchase(purchase as unknown as PurchaseType),
-      )
+      purchases.value = result.data as PurchaseType[]
       hasMore.value = result.pagination?.has_next ?? false
       return purchases.value
     } finally {
@@ -53,9 +46,7 @@ export const usePurchasesStore = defineStore('purchases', () => {
         page: currentPage.value,
         per_page: 10,
       })
-      const newPurchases = result.data.map((purchase) =>
-        mapPurchase(purchase as unknown as PurchaseType),
-      )
+      const newPurchases = result.data as PurchaseType[]
 
       purchases.value = [...purchases.value, ...newPurchases]
       hasMore.value = result.pagination?.has_next ?? false
@@ -69,7 +60,7 @@ export const usePurchasesStore = defineStore('purchases', () => {
 
   async function getPurchaseById(id: number) {
     const result = await PurchaseApi.get(id)
-    return mapPurchase(result as unknown as PurchaseType)
+    return result as PurchaseType
   }
 
   async function restorePurchase(id: number) {

@@ -2,7 +2,11 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ListItemApi } from '@/api/listItem'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
-import type { ListItem as ListItemType, Product as ProductType, Category as CategoryType } from '@/types/api'
+import type {
+  ListItem as ListItemType,
+  Product as ProductType,
+  Category as CategoryType,
+} from '@/types/api'
 
 interface ListItemWithListId extends ListItemType {
   listId: number
@@ -32,7 +36,9 @@ export const useProductsStore = defineStore('products', () => {
     } else if (enrichedProduct?.category?.id) {
       // If full product not found, but category ID exists, try to enrich category
       const categoryId = enrichedProduct.category.id
-      const fullCategory: CategoryType | undefined = globalProductsStore.categories.find((c) => c.id === categoryId)
+      const fullCategory: CategoryType | undefined = globalProductsStore.categories.find(
+        (c) => c.id === categoryId,
+      )
       if (fullCategory) {
         enrichedProduct = { ...enrichedProduct, category: fullCategory }
       }
@@ -66,7 +72,7 @@ export const useProductsStore = defineStore('products', () => {
       const newItems = result.data.map((item) => mapListItem(item, listId))
       items.value = [...items.value, ...newItems]
       hasMore.value = result.pagination?.has_next ?? false
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load more list items:', err)
       currentPage.value -= 1
     } finally {
