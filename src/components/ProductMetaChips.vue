@@ -11,7 +11,7 @@ defineProps<Props>()
 <template>
   <div class="product-categories">
     <v-chip size="default" class="category-chip" prepend-icon="mdi-tag-outline">
-      {{ product.category?.name ?? 'Sin categoría' }}
+      {{ product.category?.name ?? 'No Category' }}
     </v-chip>
   </div>
 </template>
