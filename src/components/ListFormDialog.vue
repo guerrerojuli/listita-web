@@ -56,12 +56,7 @@ function handleConfirm() {
 
 <template>
   <BaseDialog v-model="show" :title="title">
-    <BaseInput
-      v-model="listName"
-      label="List name"
-      autofocus
-      @keyup.enter="handleConfirm"
-    />
+    <BaseInput v-model="listName" label="List name" autofocus @keyup.enter="handleConfirm" />
     <BaseTextarea
       v-model="listDescription"
       label="Description (optional)"
@@ -91,15 +86,9 @@ function handleConfirm() {
         />
       </div>
       <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-      <v-btn
-        class="btn-add"
-        elevation="0"
-        :disabled="!listName.trim()"
-        @click="handleConfirm"
-      >
+      <v-btn class="btn-add" elevation="0" :disabled="!listName.trim()" @click="handleConfirm">
         {{ confirmText }}
       </v-btn>
     </template>
   </BaseDialog>
 </template>
-
