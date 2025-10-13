@@ -168,12 +168,10 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
     if (updates.metadata !== undefined) {
       product.metadata = updates.metadata as Record<string, unknown>
     }
-    const result = await ProductApi.modify(product)
-    const updated = result as ProductType
-    const index = products.value.findIndex((p) => p.id === id)
-    if (index !== -1) {
-      products.value.splice(index, 1, updated)
-    }
+    await ProductApi.modify(product)
+
+    // Reload products to get fresh data with complete category information
+    await fetchProducts()
   }
 
   function updateSearch(query: string) {
