@@ -46,13 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
       data.password,
       data.metadata,
     )
-    const result = await UserApi.register(regData)
-    // After registration, send verification email
-    try {
-      await sendVerification(data.email)
-    } catch (err) {
-      console.warn('Failed to send verification email:', err)
-    }
+    const result = await UserApi.register(regData) 
     return mapUser(result)
   }
 
