@@ -886,6 +886,7 @@ onMounted(async () => {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   scrollbar-width: none;
+  padding: 0.5rem;
 }
 
 .product-list-container::-webkit-scrollbar {
@@ -894,19 +895,21 @@ onMounted(async () => {
 
 .product-list {
   padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .product-list-item {
   cursor: pointer;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.product-list-item:last-child {
-  border-bottom: none;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  transition: background-color 0.2s ease;
 }
 
 .product-list-item:hover {
   background-color: #f5f5f5;
+  border-radius: 8px !important;
 }
 
 .dialog-empty-state {
@@ -916,14 +919,15 @@ onMounted(async () => {
 
 .create-product-item {
   cursor: pointer;
-  border-radius: 8px;
-  margin-top: 1rem;
-  border-top: none !important;
+  border-radius: 8px !important;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem !important;
+  transition: background-color 0.2s ease;
 }
 
 .create-product-item:hover {
   background-color: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
 
 .form-row {

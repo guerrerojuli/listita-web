@@ -215,7 +215,7 @@ watch(
 
       <div v-else class="empty-state">
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-package-variant</v-icon>
-        <p class="text-h6 text-medium-emphasis">No products found</p>
+        <p class="text-h6 text-medium-emphasis">No products to add</p>
       </div>
 
       <BaseDialog v-model="dialog" title="Add product">
