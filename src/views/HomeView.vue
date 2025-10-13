@@ -7,9 +7,9 @@ import SearchDropdown from '@/components/SearchDropdown.vue'
 import ListCard from '@/components/ListCard.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
-import BaseTextarea from '@/components/BaseTextarea.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ListFormDialog from '@/components/ListFormDialog.vue'
 import { useListsStore } from '@/stores/lists'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
@@ -45,6 +45,7 @@ const showEditListDialog = ref(false)
 const editingListId = ref<number | null>(null)
 const editListName = ref('')
 const editListDescription = ref('')
+const editListRecurring = ref(false)
 
 const showPurchaseDialog = ref(false)
 const purchaseListId = ref<string | null>(null)
@@ -166,6 +167,7 @@ function handleRenameList(listId: string) {
     editingListId.value = Number(listId)
     editListName.value = list.name
     editListDescription.value = list.description || ''
+    editListRecurring.value = list.recurring || false
     showEditListDialog.value = true
   }
 }
@@ -176,11 +178,13 @@ async function confirmEditList() {
       await listsStore.updateList(editingListId.value, {
         name: editListName.value.trim(),
         description: editListDescription.value?.trim() || '',
+        recurring: editListRecurring.value,
       })
       showEditListDialog.value = false
       editingListId.value = null
       editListName.value = ''
       editListDescription.value = ''
+      editListRecurring.value = false
     } catch (err: any) {
       console.error('Failed to update list:', err)
       showError('Failed to update list')
@@ -380,46 +384,19 @@ watch(
         <p class="text-body-2 text-medium-emphasis mb-4">Try a different search term</p>
       </div>
 
-      <BaseDialog v-model="dialog" title="New List">
-        <BaseInput v-model="newListName" label="List name" autofocus @keyup.enter="createNewList" />
-        <BaseTextarea
-          v-model="newListDescription"
-          label="Description (optional)"
-          class="mt-4"
-          :maxlength="250"
-          counter
-          :rows="3"
-        />
-        <v-checkbox
-          v-model="newListRecurring"
-          label="Recurring"
-          color="primary"
-          density="compact"
-          hide-details
-          class="mt-2"
-        />
-
-        <template #actions="{ close }">
-          <div style="position: absolute; bottom: 80px; left: 24px; right: 24px">
-            <BaseNotification
-              v-if="newListWarning"
-              variant="text"
-              type="warning"
-              :message="newListWarning"
-              :model-value="!!newListWarning"
-            />
-          </div>
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
-            :disabled="!newListName.trim()"
-            @click="createNewList"
-          >
-            Create
-          </v-btn>
-        </template>
-      </BaseDialog>
+      <ListFormDialog
+        v-model="dialog"
+        title="New List"
+        :name="newListName"
+        :description="newListDescription"
+        :recurring="newListRecurring"
+        confirm-text="Create"
+        :error-message="newListWarning"
+        @update:name="newListName = $event"
+        @update:description="newListDescription = $event"
+        @update:recurring="newListRecurring = $event"
+        @confirm="createNewList"
+      />
 
       <BaseDialog
         v-model="showShareDialog"
@@ -510,34 +487,18 @@ watch(
       </BaseDialog>
 
       <!-- Edit List Dialog -->
-      <BaseDialog v-model="showEditListDialog" title="Edit List" :max-width="450">
-        <BaseInput
-          v-model="editListName"
-          label="List Name"
-          placeholder="Enter list name"
-          class="mb-4"
-        />
-        <BaseTextarea
-          v-model="editListDescription"
-          label="Description (optional)"
-          placeholder="Enter list description"
-          :maxlength="250"
-          counter
-          :rows="3"
-        />
-
-        <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
-            :disabled="!editListName.trim()"
-            @click="confirmEditList"
-          >
-            Save Changes
-          </v-btn>
-        </template>
-      </BaseDialog>
+      <ListFormDialog
+        v-model="showEditListDialog"
+        title="Edit List"
+        :name="editListName"
+        :description="editListDescription"
+        :recurring="editListRecurring"
+        confirm-text="Save Changes"
+        @update:name="editListName = $event"
+        @update:description="editListDescription = $event"
+        @update:recurring="editListRecurring = $event"
+        @confirm="confirmEditList"
+      />
 
       <BaseDialog v-model="showDeleteDialog" title="Delete List" :max-width="450">
         <div class="delete-confirmation">
