@@ -59,21 +59,9 @@ const filteredActiveLists = computed(() => {
   )
 })
 
-function handleSearchInput(value: string) {
-  searchQuery.value = value
-}
-
 function handleNewList() {
   newListName.value = ''
   newListDescription.value = ''
-  newListWarning.value = ''
-  dialog.value = true
-}
-
-function handleCreateFromSearch() {
-  newListName.value = searchQuery.value.trim()
-  newListDescription.value = ''
-  searchQuery.value = ''
   newListWarning.value = ''
   dialog.value = true
 }
@@ -238,22 +226,14 @@ watch(
       <div v-if="!error" class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
-          placeholder="Search or create a list..."
+          placeholder="Search lists..."
           :show-dropdown="false"
-          @update:model-value="handleSearchInput"
-          @enter="handleCreateFromSearch"
         />
         <v-btn class="new-list-btn" elevation="0" :height="44" @click="handleNewList">
           New List
           <v-icon size="20" class="ml-2">mdi-file-edit-outline</v-icon>
         </v-btn>
       </div>
-      <v-fade-transition>
-        <div v-if="searchQuery.trim() && !error" class="search-hint">
-          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-          Press Enter to create "{{ searchQuery }}"
-        </div>
-      </v-fade-transition>
 
       <div
         v-if="filteredRecurrentLists.length > 0 && !error"

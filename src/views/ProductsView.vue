@@ -42,15 +42,6 @@ function handleAddProduct() {
   dialog.value = true
 }
 
-function handleSearchEnter() {
-  if (searchQuery.value.trim()) {
-    newProductName.value = searchQuery.value.trim()
-    searchQuery.value = ''
-    newProductWarning.value = ''
-    dialog.value = true
-  }
-}
-
 function onCategoryChange(value: number | string) {
   if (value === 'create_new') {
     showInlineCategoryCreate.value = true
@@ -180,21 +171,14 @@ watch(
       <div v-if="!error" class="search-row mb-10">
         <SearchDropdown
           v-model="searchQuery"
-          placeholder="Search or create a product..."
+          placeholder="Search products..."
           :show-dropdown="false"
-          @enter="handleSearchEnter"
         />
         <v-btn class="add-product-btn" elevation="0" :height="44" @click="handleAddProduct">
           Add Product
           <v-icon size="20" class="ml-2">mdi-plus</v-icon>
         </v-btn>
       </div>
-      <v-fade-transition>
-        <div v-if="searchQuery.trim() && !error" class="search-hint">
-          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-          Press Enter to create "{{ searchQuery }}"
-        </div>
-      </v-fade-transition>
 
       <div v-if="loading" class="empty-state">
         <v-progress-circular indeterminate color="primary" size="64" class="mb-4" />

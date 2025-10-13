@@ -42,7 +42,6 @@ const items = computed(() => productsStore.getItemsByListId(listId.value))
 
 const searchQuery = ref('')
 const isLoading = ref(false)
-const isSearching = ref(false)
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const showDeleteDialog = ref(false)
@@ -95,16 +94,6 @@ const filteredListItems = computed(() => {
   )
 })
 
-const availableProducts = computed(() => {
-  if (!searchQuery.value) return []
-  const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
-  return (globalProductsStore.products || []).filter((p) => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const notInList = !itemProductIds.has(p.id)
-    return matchesSearch && notInList
-  })
-})
-
 const filteredDialogProducts = computed(() => {
   const itemProductIds = new Set((items.value || []).map((i) => i.product?.id).filter(Boolean))
   const allAvailableProducts = (globalProductsStore.products || []).filter(
@@ -117,45 +106,6 @@ const filteredDialogProducts = computed(() => {
     p.name?.toLowerCase().includes(productSearchQuery.value.toLowerCase()),
   )
 })
-
-async function handleSearchEnter() {
-  if (!searchQuery.value.trim()) return
-
-  isSearching.value = true
-  try {
-    await globalProductsStore.fetchProducts({ name: searchQuery.value.trim() })
-  } catch (err) {
-    console.error('Failed to search products:', err)
-  } finally {
-    isSearching.value = false
-  }
-
-  if (availableProducts.value.length > 0) {
-    const product = availableProducts.value[0]
-    if (product) {
-      await handleAddProduct(product)
-    }
-  } else {
-    searchQuery.value = ''
-    router.push('/products')
-  }
-}
-
-async function handleAddProduct(product: Product) {
-  const isAlreadyInList = items.value?.some((item) => item.product?.id === product.id)
-
-  if (isAlreadyInList) {
-    showWarning(`"${product.name}" is already in this list`)
-    searchQuery.value = ''
-    return
-  }
-
-  selectedProductToAdd.value = product
-  addQuantity.value = 1
-  addUnit.value = (product.metadata as any)?.unit || 'unit'
-  showUnitQuantityDialog.value = true
-  searchQuery.value = ''
-}
 
 function handleToggleComplete(itemId: number) {
   productsStore.setPurchased(
@@ -500,24 +450,14 @@ onMounted(async () => {
       <div class="search-row mb-10" style="max-width: 900px; margin-left: auto; margin-right: auto">
         <SearchDropdown
           v-model="searchQuery"
-          placeholder="Search or add a product..."
+          placeholder="Search products in this list..."
           :show-dropdown="false"
-          @enter="handleSearchEnter"
         />
         <v-btn class="add-product-btn" elevation="0" :height="44" @click="showAddProductDialog = true">
           Add Product
           <v-icon size="20" class="ml-2">mdi-plus</v-icon>
         </v-btn>
       </div>
-      <v-fade-transition>
-        <div v-if="searchQuery.trim() && !isSearching" class="search-hint" style="max-width: 900px; margin-left: auto; margin-right: auto; margin-top: -2rem; margin-bottom: 2rem">
-          <v-icon size="small" class="mr-1">mdi-keyboard-return</v-icon>
-          <span v-if="availableProducts.length > 0 && availableProducts[0]">
-            Press Enter to add "{{ availableProducts[0].name }}"
-          </span>
-          <span v-else> Press Enter to create "{{ searchQuery }}" </span>
-        </div>
-      </v-fade-transition>
 
       <div
         v-if="filteredListItems && filteredListItems.length > 0"
@@ -665,16 +605,14 @@ onMounted(async () => {
 
               <!-- Infinite scroll trigger -->
               <div ref="dialogLoadMoreTrigger" class="dialog-load-more-trigger">
-                <v-list-item v-if="globalProductsStore.loadingMore">
-                  <div class="text-center py-2">
-                    <v-progress-circular indeterminate color="primary" size="24" />
-                  </div>
-                </v-list-item>
+                <div v-if="globalProductsStore.loadingMore" class="text-center py-2">
+                  <v-progress-circular indeterminate color="primary" size="24" />
+                </div>
               </div>
             </v-list>
           </div>
 
-          <div v-else class="text-center py-8">
+          <div v-else class="dialog-empty-state">
             <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-package-variant</v-icon>
             <p class="text-body-2 text-medium-emphasis">No products found</p>
           </div>
@@ -947,6 +885,11 @@ onMounted(async () => {
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+  scrollbar-width: none;
+}
+
+.product-list-container::-webkit-scrollbar {
+  display: none;
 }
 
 .product-list {
@@ -964,6 +907,11 @@ onMounted(async () => {
 
 .product-list-item:hover {
   background-color: #f5f5f5;
+}
+
+.dialog-empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
 }
 
 .create-product-item {
@@ -1004,11 +952,9 @@ onMounted(async () => {
 }
 
 .dialog-load-more-trigger {
-  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem 0;
 }
 
 .load-more-trigger {
