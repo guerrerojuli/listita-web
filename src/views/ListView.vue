@@ -13,7 +13,6 @@ import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import { useAuthStore } from '@/stores/auth'
-import { useNotification } from '@/composables/useNotification'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import ProductItem from '@/components/ProductItem.vue'
 import type { Product } from '@/types/api'
@@ -24,7 +23,6 @@ const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
 const authStore = useAuthStore()
-const { } = useNotification()
 
 const { hasMore, loadingMore } = storeToRefs(productsStore)
 
@@ -57,7 +55,12 @@ const deleteItemId = ref<number | null>(null)
 const deleteProductName = ref('')
 
 const showEditItemDialog = ref(false)
-const editingItem = ref<{ id: number; product?: { name?: string; category?: { name?: string } }; unit?: string; quantity?: number } | null>(null)
+const editingItem = ref<{
+  id: number
+  product?: { name?: string; category?: { name?: string } }
+  unit?: string
+  quantity?: number
+} | null>(null)
 const editItemUnit = ref<string>('unit')
 const editItemAmount = ref<number>(1)
 
