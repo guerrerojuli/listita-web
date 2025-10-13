@@ -143,6 +143,12 @@ export const useListsStore = defineStore('lists', () => {
 
   async function shareList(id: number, email: string) {
     await ShoppingListApi.share(id, email)
+    const updatedList = await ShoppingListApi.get(id)
+    const mapped = mapShoppingList(updatedList as unknown as ShoppingListType)
+    const index = lists.value.findIndex((list) => list.id === id)
+    if (index !== -1) {
+      lists.value.splice(index, 1, mapped)
+    }
   }
 
   async function getSharedUsers(id: number) {
@@ -151,6 +157,12 @@ export const useListsStore = defineStore('lists', () => {
 
   async function revokeAccess(listId: number, userId: number) {
     await ShoppingListApi.revokeAccess(listId, userId)
+    const updatedList = await ShoppingListApi.get(listId)
+    const mapped = mapShoppingList(updatedList as unknown as ShoppingListType)
+    const index = lists.value.findIndex((list) => list.id === listId)
+    if (index !== -1) {
+      lists.value.splice(index, 1, mapped)
+    }
   }
 
   function updateSearch(query: string) {

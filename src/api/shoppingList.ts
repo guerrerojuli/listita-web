@@ -76,13 +76,17 @@ class ShoppingListApi {
   }
 
   static async purchase(id: number, controller?: AbortController): Promise<void> {
-    return await Api.post<void>(
-      ShoppingListApi.getUrl(`${id}/purchase`),
-      true,
-      undefined,
-      undefined,
-      controller,
-    )
+    const url = ShoppingListApi.getUrl(`${id}/purchase`)
+    console.log('ShoppingListApi.purchase - URL:', url)
+    console.log('ShoppingListApi.purchase - ID:', id)
+    try {
+      const result = await Api.post<void>(url, true, undefined, undefined, controller)
+      console.log('ShoppingListApi.purchase - Success:', result)
+      return result
+    } catch (err) {
+      console.error('ShoppingListApi.purchase - Error:', err)
+      throw err
+    }
   }
 
   static async reset(id: number, controller?: AbortController): Promise<void> {

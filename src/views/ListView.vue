@@ -12,6 +12,7 @@ import BaseNotification from '@/components/BaseNotification.vue'
 import { useListsStore } from '@/stores/lists'
 import { useProductsStore } from '@/stores/products'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
+import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import ProductItem from '@/components/ProductItem.vue'
@@ -22,12 +23,18 @@ const router = useRouter()
 const listsStore = useListsStore()
 const productsStore = useProductsStore()
 const globalProductsStore = useGlobalProductsStore()
+const authStore = useAuthStore()
 const { } = useNotification()
 
 const { hasMore, loadingMore } = storeToRefs(productsStore)
 
 const listId = computed(() => Number(route.params.id as string))
 const list = computed(() => listsStore.lists.find((l) => l.id === listId.value))
+
+const isOwner = computed(() => {
+  if (!list.value || !authStore.user) return false
+  return list.value.owner?.id === authStore.user.id
+})
 
 watch(
   list,
@@ -205,8 +212,8 @@ async function handlePurchaseList() {
       await listsStore.purchaseList(listId.value)
       alert('List purchased successfully!')
       router.push('/')
-    } catch {
-      alert('Failed to purchase list')
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Failed to purchase list')
     }
   }
 }
@@ -412,20 +419,20 @@ onMounted(async () => {
                 <v-btn icon="mdi-dots-vertical" variant="text" v-bind="props" />
               </template>
               <v-list>
-                <v-list-item @click="handleEditList">
+                <v-list-item v-if="isOwner" @click="handleEditList">
                   <template v-slot:prepend>
                     <v-icon icon="mdi-pencil-outline" />
                   </template>
                   <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
-                <v-list-item @click="handleShareList">
+                <v-list-item v-if="isOwner" @click="handleShareList">
                   <template v-slot:prepend>
                     <v-icon icon="mdi-share-variant-outline" />
                   </template>
                   <v-list-item-title>Share</v-list-item-title>
                 </v-list-item>
-                <v-divider />
-                <v-list-item @click="handleResetList">
+                <v-divider v-if="isOwner" />
+                <v-list-item v-if="isOwner" @click="handleResetList">
                   <template v-slot:prepend>
                     <v-icon icon="mdi-refresh" />
                   </template>

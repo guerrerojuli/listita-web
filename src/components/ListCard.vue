@@ -5,6 +5,7 @@ import type { ShoppingList } from '@/types/api'
 interface Props {
   list: ShoppingList
   isHighlighted?: boolean
+  isOwner?: boolean
 }
 
 interface Emits {
@@ -13,13 +14,13 @@ interface Emits {
   (e: 'toggle-recurrent'): void
   (e: 'delete'): void
   (e: 'rename'): void
-  (e: 'toggle-private'): void
   (e: 'share'): void
-  (e: 'view-history'): void
+  (e: 'purchase'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isHighlighted: false,
+  isOwner: true,
 })
 
 const emit = defineEmits<Emits>()
@@ -53,18 +54,13 @@ function renameList() {
   showMenu.value = false
 }
 
-function togglePrivate() {
-  emit('toggle-private')
-  showMenu.value = false
-}
-
 function shareList() {
   emit('share')
   showMenu.value = false
 }
 
-function viewHistory() {
-  emit('view-history')
+function purchaseList() {
+  emit('purchase')
   showMenu.value = false
 }
 </script>
@@ -95,6 +91,7 @@ function viewHistory() {
         <v-card min-width="220" class="menu-card" elevation="8">
           <v-list class="menu-list" density="compact">
             <v-list-item
+              v-if="isOwner"
               @click="toggleRecurrent"
               class="menu-item menu-item-recurring"
               rounded="lg"
@@ -112,39 +109,39 @@ function viewHistory() {
               </v-list-item-title>
             </v-list-item>
 
-            <v-divider class="menu-divider" />
+            <v-divider v-if="isOwner" class="menu-divider" />
 
-            <v-list-item @click="renameList" class="menu-item" rounded="lg">
+            <v-list-item v-if="isOwner" @click="renameList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-pencil-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Edit</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="togglePrivate" class="menu-item" rounded="lg">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-lock-outline" size="20" class="menu-icon" />
-              </template>
-              <v-list-item-title class="menu-text">Make private</v-list-item-title>
-            </v-list-item>
-
-            <v-list-item @click="shareList" class="menu-item" rounded="lg">
+            <v-list-item v-if="isOwner" @click="shareList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
                 <v-icon icon="mdi-share-variant-outline" size="20" class="menu-icon" />
               </template>
               <v-list-item-title class="menu-text">Share</v-list-item-title>
             </v-list-item>
 
-            <v-list-item @click="viewHistory" class="menu-item" rounded="lg">
+            <v-divider v-if="isOwner" class="menu-divider" />
+
+            <v-list-item @click="purchaseList" class="menu-item" rounded="lg">
               <template v-slot:prepend>
-                <v-icon icon="mdi-history" size="20" class="menu-icon" />
+                <v-icon icon="mdi-cart-check" size="20" class="menu-icon" />
               </template>
-              <v-list-item-title class="menu-text">Purchase History</v-list-item-title>
+              <v-list-item-title class="menu-text">Mark as Purchased</v-list-item-title>
             </v-list-item>
 
-            <v-divider class="menu-divider" />
+            <v-divider v-if="isOwner" class="menu-divider" />
 
-            <v-list-item @click="deleteList" class="menu-item menu-item-danger" rounded="lg">
+            <v-list-item
+              v-if="isOwner"
+              @click="deleteList"
+              class="menu-item menu-item-danger"
+              rounded="lg"
+            >
               <template v-slot:prepend>
                 <v-icon icon="mdi-delete-outline" size="20" class="menu-icon menu-icon-delete" />
               </template>
