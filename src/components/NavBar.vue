@@ -6,6 +6,7 @@ import { useListsStore } from '@/stores/lists'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import DialogButton from '@/components/DialogButton.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -188,8 +189,8 @@ async function handleChangePassword() {
     <BaseInput v-model="editSurname" label="Last Name" />
 
     <template #actions="{ close }">
-      <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-      <v-btn class="btn-add" elevation="0" @click="handleUpdateProfile">Save</v-btn>
+      <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+      <DialogButton variant="primary" @click="handleUpdateProfile">Save</DialogButton>
     </template>
   </BaseDialog>
 
@@ -225,8 +226,8 @@ async function handleChangePassword() {
     />
 
     <template #actions="{ close }">
-      <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-      <v-btn class="btn-add" elevation="0" @click="handleChangePassword">Change Password</v-btn>
+      <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+      <DialogButton variant="primary" @click="handleChangePassword">Change Password</DialogButton>
     </template>
   </BaseDialog>
 </template>

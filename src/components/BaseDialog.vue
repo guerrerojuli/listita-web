@@ -71,35 +71,4 @@ function handleClose() {
   justify-content: flex-end;
 }
 
-.dialog-actions :deep(.btn-cancel) {
-  background-color: #e0e0e0 !important;
-  color: #424242 !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.dialog-actions :deep(.btn-add),
-.dialog-actions :deep(.btn-primary) {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
-
-.dialog-actions :deep(.btn-remove),
-.dialog-actions :deep(.btn-danger) {
-  background-color: #f44336 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0.5rem 1.5rem !important;
-}
 </style>

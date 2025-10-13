@@ -10,6 +10,7 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ListFormDialog from '@/components/ListFormDialog.vue'
+import DialogButton from '@/components/DialogButton.vue'
 import { useListsStore } from '@/stores/lists'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
@@ -470,19 +471,18 @@ watch(
               :model-value="!!shareError"
             />
           </div>
-          <v-btn class="btn-cancel" elevation="0" @click="close">
+          <DialogButton variant="cancel" @click="close">
             {{ isOwner ? 'Done' : 'Close' }}
-          </v-btn>
-          <v-btn
+          </DialogButton>
+          <DialogButton
             v-if="isOwner"
-            class="btn-add"
-            elevation="0"
+            variant="primary"
             :disabled="!shareEmail.trim() || shareLoading"
             :loading="shareLoading"
             @click="submitShareList"
           >
             Add
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -511,8 +511,8 @@ watch(
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteList">Delete</v-btn>
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton variant="danger" @click="confirmDeleteList">Delete</DialogButton>
         </template>
       </BaseDialog>
 
@@ -612,18 +612,6 @@ watch(
   margin: 0;
 }
 
-.btn-remove {
-  color: white !important;
-  background-color: #e53935 !important;
-  text-transform: none;
-  font-weight: 500;
-  padding: 0 24px !important;
-  border-radius: 8px !important;
-}
-
-.btn-remove:hover {
-  background-color: #c62828 !important;
-}
 
 .load-more-trigger {
   min-height: 100px;

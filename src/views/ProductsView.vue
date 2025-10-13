@@ -7,6 +7,8 @@ import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import BaseNotification from '@/components/BaseNotification.vue'
+import DialogButton from '@/components/DialogButton.vue'
+import BaseButton from '@/components/BaseButton.vue'
 import { useGlobalProductsStore } from '@/stores/globalProducts'
 import GlobalProductCard from '@/components/GlobalProductCard.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
@@ -47,7 +49,19 @@ function handleAddProduct() {
   inlineCategoryName.value = ''
   inlineCategoryError.value = ''
   newProductWarning.value = ''
+  newProductName.value = ''
+  newProductCategoryId.value = null
+  showInlineCategoryCreate.value = false
   dialog.value = true
+}
+
+function handleDialogClose() {
+  newProductName.value = ''
+  newProductCategoryId.value = null
+  newProductWarning.value = ''
+  showInlineCategoryCreate.value = false
+  inlineCategoryName.value = ''
+  inlineCategoryError.value = ''
 }
 
 async function createInlineCategory() {
@@ -58,6 +72,7 @@ async function createInlineCategory() {
       inlineCategoryError.value = ''
       showInlineCategoryCreate.value = false
       newProductCategoryId.value = newCategory.id
+      // Don't close the dialog - keep it open for product creation
     } catch (err) {
       inlineCategoryError.value = 'Failed to create category'
     }
@@ -262,8 +277,8 @@ watch(
         <p class="text-h6 text-medium-emphasis">No products to add</p>
       </div>
 
-      <BaseDialog v-model="dialog" title="Add product">
-        <BaseInput v-model="newProductName" label="Name" class="mb-4" />
+      <BaseDialog v-model="dialog" :title="showInlineCategoryCreate ? 'Add Category' : 'Add product'" @update:model-value="(value) => !value && handleDialogClose()">
+        <BaseInput v-if="!showInlineCategoryCreate" v-model="newProductName" label="Name" class="mb-4" />
 
         <div v-if="!showInlineCategoryCreate">
           <div class="category-label">Category</div>
@@ -320,29 +335,6 @@ watch(
             :message="inlineCategoryError"
             :model-value="!!inlineCategoryError"
           />
-          <div class="inline-category-actions">
-            <v-btn
-              class="btn-cancel"
-              elevation="0"
-              @click="
-                () => {
-                  showInlineCategoryCreate = false
-                  inlineCategoryName = ''
-                  inlineCategoryError = ''
-                }
-              "
-            >
-              Cancel
-            </v-btn>
-            <v-btn
-              class="btn-create-category"
-              elevation="0"
-              :disabled="!inlineCategoryName.trim()"
-              @click="createInlineCategory"
-            >
-              Create
-            </v-btn>
-          </div>
         </div>
 
         <template #actions="{ close }">
@@ -355,15 +347,23 @@ watch(
               :model-value="!!newProductWarning"
             />
           </div>
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          <DialogButton variant="cancel" @click="() => { close(); handleDialogClose(); }">Cancel</DialogButton>
+          <DialogButton
+            v-if="!showInlineCategoryCreate"
+            variant="primary"
             :disabled="!newProductName.trim() || !newProductCategoryId"
             @click="createNewProduct"
           >
             Add
-          </v-btn>
+          </DialogButton>
+          <DialogButton
+            v-else
+            variant="primary"
+            :disabled="!inlineCategoryName.trim()"
+            @click="createInlineCategory"
+          >
+            Add
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -379,9 +379,8 @@ watch(
         />
 
         <template #actions>
-          <v-btn
-            class="btn-remove"
-            elevation="0"
+          <DialogButton
+            variant="danger"
             @click="
               () => {
                 if (editingProduct) {
@@ -391,15 +390,14 @@ watch(
             "
           >
             Remove
-          </v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          </DialogButton>
+          <DialogButton
+            variant="primary"
             :disabled="!editProductName.trim() || !editProductCategoryId"
             @click="updateProduct"
           >
             Save
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -414,8 +412,8 @@ watch(
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteProduct">Delete</v-btn>
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton variant="danger" @click="confirmDeleteProduct">Delete</DialogButton>
         </template>
       </BaseDialog>
 
@@ -423,15 +421,14 @@ watch(
         <BaseInput v-model="editCategoryName" label="Category name" class="mb-4" />
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn
-            class="btn-add"
-            elevation="0"
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton
+            variant="primary"
             :disabled="!editCategoryName.trim()"
             @click="confirmEditCategory"
           >
             Save
-          </v-btn>
+          </DialogButton>
         </template>
       </BaseDialog>
 
@@ -446,8 +443,8 @@ watch(
         </div>
 
         <template #actions="{ close }">
-          <v-btn class="btn-cancel" elevation="0" @click="close">Cancel</v-btn>
-          <v-btn class="btn-remove" elevation="0" @click="confirmDeleteCategory">Delete</v-btn>
+          <DialogButton variant="cancel" @click="close">Cancel</DialogButton>
+          <DialogButton variant="danger" @click="confirmDeleteCategory">Delete</DialogButton>
         </template>
       </BaseDialog>
     </v-container>
@@ -526,19 +523,6 @@ watch(
   justify-content: flex-end;
 }
 
-.btn-create-category {
-  background-color: #000 !important;
-  color: white !important;
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 0 1.5rem !important;
-}
-
-.btn-create-category:hover {
-  background-color: #1a1a1a !important;
-}
 
 .delete-confirmation {
   text-align: center;
@@ -562,18 +546,6 @@ watch(
   margin: 0;
 }
 
-.btn-remove {
-  color: white !important;
-  background-color: #e53935 !important;
-  text-transform: none;
-  font-weight: 500;
-  padding: 0 24px !important;
-  border-radius: 8px !important;
-}
-
-.btn-remove:hover {
-  background-color: #c62828 !important;
-}
 
 .load-more-trigger {
   min-height: 100px;
