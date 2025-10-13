@@ -515,12 +515,12 @@ watch(
 }
 
 .new-list-btn {
-  background-color: #000000 !important;
+  background-color: #999999 !important;
   color: #ffffff !important;
   text-transform: none;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #000000 !important;
+  border: 1px solid #838383 !important;
   border-radius: 12px;
   flex-shrink: 0;
   min-width: 120px;
@@ -528,7 +528,7 @@ watch(
 }
 
 .new-list-btn:hover {
-  background-color: #333333 !important;
+  background-color: #757575 !important;
   color: white !important;
 }
 
