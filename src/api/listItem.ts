@@ -13,8 +13,8 @@ class ListItemApi {
     quantity: number = 1,
     unit: string = 'unit',
     controller?: AbortController,
-  ): Promise<ListItem | { item: ListItem }> {
-    return await Api.post<ListItem | { item: ListItem }>(
+  ): Promise<ListItem> {
+    return await Api.post<ListItem>(
       ListItemApi.getUrl(listId),
       true,
       { product: { id: productId }, quantity, unit },

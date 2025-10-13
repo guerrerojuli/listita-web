@@ -169,7 +169,7 @@ export const useGlobalProductsStore = defineStore('globalProducts', () => {
       product.metadata = updates.metadata as Record<string, unknown>
     }
     const result = await ProductApi.modify(product)
-    const updated: ProductType = ('product' in result ? result.product : result) as ProductType
+    const updated = result as ProductType
     const index = products.value.findIndex((p) => p.id === id)
     if (index !== -1) {
       products.value.splice(index, 1, updated)

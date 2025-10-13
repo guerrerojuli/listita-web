@@ -19,16 +19,8 @@ class ProductApi {
     return await Api.post<Product>(ProductApi.getUrl(), true, product, undefined, controller)
   }
 
-  static async modify(
-    product: Product,
-    controller?: AbortController,
-  ): Promise<Product | { product: Product }> {
-    return await Api.put<Product | { product: Product }>(
-      ProductApi.getUrl(product.id),
-      true,
-      product,
-      controller,
-    )
+  static async modify(product: Product, controller?: AbortController): Promise<Product> {
+    return await Api.put<Product>(ProductApi.getUrl(product.id), true, product, controller)
   }
 
   static async remove(id: number, controller?: AbortController): Promise<void> {
